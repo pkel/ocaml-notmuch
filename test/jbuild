@@ -1,0 +1,11 @@
+(executables
+ ((libraries (notmuch))
+  (names (tests))
+  (modules
+   (tests))))
+
+(alias
+ ((name runtest)
+  (package notmuch)
+  (deps (tests.exe))
+  (action (run ${<}))))

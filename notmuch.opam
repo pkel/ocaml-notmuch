@@ -1,0 +1,18 @@
+opam-version: "1.2"
+maintainer: "p@tr1k.de"
+authors: ["Patrik Keller"]
+homepage: "https://github.com/pkel/ocaml-notmuch"
+bug-reports: "https://github.com/pkel/ocaml-notmuch/issues"
+dev-repo: "https://github.com/pkel/ocaml-notmuch.git"
+
+build: [
+  ["jbuilder" "build" "-p" name "-j" jobs]
+]
+
+build-test: [
+  ["jbuilder" "runtest" "-p" name]
+]
+
+depends: [
+  "jbuilder" {build}
+]
