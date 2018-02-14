@@ -22,14 +22,17 @@ let () =
   in
   List.iter check l
 
-
 let print_revision db =
   let open Database in
   get_revision db |> string_of_revision |> Printf.printf "Revision: %s\n"
 
+let print_all_tags db =
+  Tags.all_tags db |> List.iter print_endline
+
 let act_on db =
   print_endline "Database opened" ;
   print_revision db ;
+  print_all_tags db ;
   Database.close db
 
 let () =

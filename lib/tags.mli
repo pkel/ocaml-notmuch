@@ -1,3 +1,3 @@
 type t
 
-val to_list : t -> Tag.t list
+val all_tags : Database.t -> string list
