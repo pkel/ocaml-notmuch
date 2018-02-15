@@ -1,6 +1,6 @@
 (** opaque handler for multiple messages *)
-type t
-type m = Message.t
+type t = C.messages
+type m = C.message
 
 val fold: t -> init:'acc -> f:('acc -> m -> 'acc) -> 'acc
 val map:  t -> f:(m -> 'a) -> 'a list

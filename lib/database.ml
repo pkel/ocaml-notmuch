@@ -1,20 +1,19 @@
 open Ctypes
-open Api
 
-type t = database
-let typ : t typ = database_t
+type t = C.database
+let typ : t typ = C.database_t
 
 (* open database at path *)
 let open_ ?(write=false) path =
   let db_ptr = allocate typ null in
   let mode = if write then 1 else 0 in
-  match database_open path mode db_ptr with
+  match C.database_open path mode db_ptr with
   | 0 -> Some (!@ db_ptr)
   | _ -> None
 
 (* commit changes and close database *)
 let close db =
-  match database_close db with
+  match C.database_close db with
   | 0 -> ()
   | _ -> raise (Failure "could not close db")
 
@@ -23,7 +22,7 @@ type revision = string * Unsigned.ulong
 
 let get_revision db =
   let uuid_ptr = allocate string "" in
-  let rev = database_get_revision db uuid_ptr in
+  let rev = C.database_get_revision db uuid_ptr in
   (!@ uuid_ptr , rev)
 
 type rev_comp_result =

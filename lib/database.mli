@@ -1,5 +1,5 @@
 (** opaque database type *)
-type t = Api.database
+type t = C.database
 
 (** open database at path. write enables write access. default: r/o *)
 val open_ : ?write:bool -> string -> t option
