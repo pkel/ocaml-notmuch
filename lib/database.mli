@@ -23,3 +23,6 @@ val rev_compare : revision -> revision -> rev_comp_result
 (** revision serialization *)
 val string_of_revision : revision -> string
 val revision_of_string : string -> revision option
+
+(** get all used tags *)
+val get_all_tags : t -> string list

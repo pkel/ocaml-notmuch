@@ -27,12 +27,19 @@ let print_revision db =
   get_revision db |> string_of_revision |> Printf.printf "Revision: %s\n"
 
 let print_all_tags db =
-  Tags.all_tags db |> List.iter print_endline
+  Database.get_all_tags db
+  |> String.concat " "
+  |> Printf.printf "Available tags: %s\n"
+
+let count_all_messages db =
+  let open Query in
+  from_string "*" |> Messages.count db
 
 let act_on db =
   print_endline "Database opened" ;
   print_revision db ;
   print_all_tags db ;
+  count_all_messages db |> Printf.printf "Message count: %d\n" ;
   Database.close db
 
 let () =

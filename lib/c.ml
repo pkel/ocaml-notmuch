@@ -57,62 +57,62 @@ let database_get_all_tags =
 
 let query_create =
   foreign
-    "notmuch_"
+    "notmuch_query_create"
     (database_t @-> string @-> returning query_t)
 
 let query_get_query_string =
   foreign
-    "notmuch_"
+    "notmuch_query_get_query_string"
     (query_t @-> returning string)
 
 let query_get_database =
   foreign
-    "notmuch_"
+    "notmuch_query_get_database"
     (query_t @-> returning database_t)
 
 let query_set_omit_excluded =
   foreign
-    "notmuch_"
+    "notmuch_query_set_omit_excluded"
     (query_t @-> exlude_t @-> returning void)
 
 let query_set_sort =
   foreign
-    "notmuch_"
+    "notmuch_query_set_sort"
     (query_t @-> sort_t @-> returning void)
 
 let query_get_sort =
   foreign
-    "notmuch_"
+    "notmuch_query_get_sort"
     (query_t @-> returning sort_t)
 
 let query_add_tag_exclude =
   foreign
-    "notmuch_"
+    "notmuch_query_add_tag_exclude"
     (query_t @-> string @-> returning status_t)
 
 let query_search_threads =
   foreign
-    "notmuch_"
+    "notmuch_query_search_threads"
     (query_t @-> ptr threads_t @-> returning status_t)
 
 let query_search_messages =
   foreign
-    "notmuch_"
+    "notmuch_query_search_messages"
     (query_t @-> ptr messages_t @-> returning status_t)
 
 let query_destroy =
   foreign
-    "notmuch_"
+    "notmuch_query_destroy"
     (query_t @-> returning void)
 
 let query_count_threads =
   foreign
-    "notmuch_"
+    "notmuch_query_count_threads"
     (query_t @-> ptr uint @-> returning status_t)
 
 let query_count_messages =
   foreign
-    "notmuch_"
+    "notmuch_query_count_messages"
     (query_t @-> ptr uint @-> returning status_t)
 
 let threads_valid =
