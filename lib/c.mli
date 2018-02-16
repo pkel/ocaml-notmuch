@@ -1,4 +1,5 @@
 open Ctypes
+open PosixTypes
 
 (** Interface to /usr/include/notmuch.h
  *  See details there.
@@ -19,7 +20,7 @@ type database_mode      = int (* enum *)
 type sort               = int (* enum *)
 type exlude             = int (* enum *)
 type message_flag       = int (* enum *)
-type message_properties = int (* enum *)
+type message_properties = unit ptr
 
 val status_t             : status             typ
 val database_t           : database           typ
@@ -69,9 +70,69 @@ val messages_valid : messages -> bool
 val messages_get : messages -> message
 val messages_move_to_next : messages -> unit
 val messages_destroy : messages -> unit
+val messages_collect_tags : messages -> tags
 
 (** Tags iterator *)
 val tags_valid : tags -> bool
 val tags_get : tags -> string
 val tags_move_to_next : tags -> unit
 val tags_destroy : tags -> unit
+
+(** Filenames iterator *)
+val filenames_valid : filenames -> bool
+val filenames_get : filenames -> string
+val filenames_move_to_next : filenames -> unit
+val filenames_destroy : filenames -> unit
+
+(** Properties iterator *)
+val properties_valid : message_properties -> bool
+val properties_key : message_properties -> string
+val properties_value : message_properties -> string
+val properties_move_to_next : message_properties -> unit
+val properties_destroy : message_properties -> unit
+
+(** Properties key/value access *)
+val message_get_property : message -> string -> string ptr -> status
+val message_add_property : message -> string -> string -> status
+val message_remove_property : message -> string -> string -> status
+val message_remove_all_properties : message -> string -> status
+
+(** Thread access *)
+val thread_get_thread_id : thread -> string
+val thread_get_total_messages :  thread -> int
+val thread_get_matched_messages : thread -> int
+val thread_get_toplevel_messages : thread -> messages
+val thread_get_messages : thread -> messages
+val thread_get_authors : thread -> string
+val thread_get_subject : thread -> string
+val thread_get_oldest_date : thread -> time_t
+val thread_get_newest_date : thread -> time_t
+val thread_get_tags : thread -> tags
+val thread_destroy : thread -> unit
+
+(** Message access *)
+val message_get_message_id : message -> string
+val message_get_thread_id : message -> string
+val message_get_replies : message -> messages
+val message_get_filename : message -> string
+val message_get_filenames : message -> filenames
+val message_get_flag : message -> message_flag -> bool
+val message_set_flag : message -> message_flag -> bool -> unit
+val message_get_date : message -> time_t
+val message_get_header : message -> string -> string
+val message_get_tags : message -> tags
+val message_add_tag : message -> string -> status
+val message_remove_tag : message -> string -> status
+val message_remove_all_tags : message -> status
+val message_maildir_flags_to_tags : message -> status
+val message_tags_to_maildir_flags : message -> status
+val message_freeze : message -> status
+val message_thaw : message -> status
+val message_destroy : message -> unit
+
+(** Missing:
+  * directory_*
+  * config_*
+  * database_*
+  *)
+
