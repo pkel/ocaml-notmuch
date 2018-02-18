@@ -26,6 +26,38 @@ let print_revision db =
   let open Database in
   get_revision db |> string_of_revision |> Printf.printf "Revision: %s\n"
 
+let test_all_tags db =
+  let module S = Set.Make(String) in
+  let should = Database.get_all_tags db |> S.of_list in
+  let init = S.empty in
+  let f acc el =
+    Message.get_tags el |> S.of_list |> S.union acc
+  in
+  let manual =
+    let open Query in
+    from_string "*" |> Messages.fold db ~init ~f
+  in
+  let d = S.diff manual should in
+  match S.cardinal d with
+  | 0 -> ()
+  | _ -> failwith "test_all_tags"
+
+let test_count db =
+  let q = "*" in
+  let should =
+    let open Query in
+    from_string q |> Messages.count db
+  in
+  let manual=
+    let init = 0 in
+    let f acc el = acc + 1 in
+    let open Query in
+    from_string "*" |> Messages.fold db ~init ~f
+  in
+  match should - manual with
+  | 0 -> ()
+  | _ -> failwith "test_count"
+
 let print_all_tags db =
   Database.get_all_tags db
   |> String.concat " "
@@ -40,6 +72,8 @@ let act_on db =
   print_revision db ;
   print_all_tags db ;
   count_all_messages db |> Printf.printf "Message count: %d\n" ;
+  test_count db ;
+  test_all_tags db ;
   Database.close db
 
 let () =
