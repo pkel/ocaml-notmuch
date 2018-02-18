@@ -39,6 +39,9 @@ val exlude_t             : exlude             typ
 val message_flag_t       : message_flag       typ
 val message_properties_t : message_properties typ
 
+(** Status *)
+val status_to_string : status -> string
+
 (** Database basics *)
 val database_open : string -> database_mode -> database ptr -> status
 val database_close : database -> status

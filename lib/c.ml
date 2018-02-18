@@ -36,6 +36,10 @@ let exlude_t             : exlude             typ = int
 let message_flag_t       : message_flag       typ = int
 let message_properties_t : message_properties typ = ptr void
 
+let status_to_string =
+  foreign "notmuch_status_to_string"
+    (status_t @-> returning string)
+
 let database_open =
   foreign "notmuch_database_open"
     (string @-> database_mode_t @-> ptr database_t @-> returning status_t)
