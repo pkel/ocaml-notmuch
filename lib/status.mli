@@ -1,4 +1,4 @@
-exception Notmuch_Error of string
+exception Notmuch_error of string
 
 (* Check error code and raise Notmuch_error if neccessary *)
 val throw : C.status -> unit
