@@ -85,11 +85,11 @@ val filenames_move_to_next : filenames -> unit
 val filenames_destroy : filenames -> unit
 
 (** Properties iterator *)
-val properties_valid : message_properties -> bool
-val properties_key : message_properties -> string
-val properties_value : message_properties -> string
-val properties_move_to_next : message_properties -> unit
-val properties_destroy : message_properties -> unit
+val message_properties_valid : message_properties -> bool
+val message_properties_key : message_properties -> string
+val message_properties_value : message_properties -> string
+val message_properties_move_to_next : message_properties -> unit
+val message_properties_destroy : message_properties -> unit
 
 (** Properties key/value access *)
 val message_get_property : message -> string -> string ptr -> status
