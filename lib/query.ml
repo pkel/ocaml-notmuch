@@ -97,21 +97,25 @@ module F (A : Result) : (Exec with type tmp := A.el) = struct
     let () = C.query_destroy q in
     Unsigned.UInt.to_int !@cnt_ptr
 
-  let search db query =
+  let search db query f =
+    (* prepare query and execute *)
     let res_ptr = allocate A.i_t A.null in
     let q = finalize db query in
     let () = A.search q res_ptr |> Status.throw in
+    (* do stuff on search result *)
+    let return = f !@res_ptr in
+    (* destroy query and returned object , then return *)
     let () = C.query_destroy q in
-    !@res_ptr
+    return
 
   let fold db query ~init ~f =
-    search db query |> A.I.fold ~init ~f
+    A.I.fold ~init ~f |> search db query
 
   let map db query ~f =
-    search db query |> A.I.map ~f
+    A.I.map ~f |> search db query
 
   let iter db query ~f =
-    search db query |> A.I.iter ~f
+    A.I.iter ~f |> search db query
 end
 
 (* Result: Messages *)
