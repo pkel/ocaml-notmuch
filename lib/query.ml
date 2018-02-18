@@ -64,19 +64,17 @@ let finalize db query =
   List.iter (add_tag q) query.exclude_tags ;
   q
 
-module type Iterator = sig
+module type Result = sig
   type i
   type el
 
   val i_t : i typ
   val null : i
 
-  val count   : C.query -> Unsigned.UInt.t ptr -> C.status
-  val exec    : C.query -> i ptr -> C.status
-  val valid   : i -> bool
-  val get     : i -> el
-  val move    : i -> unit
-  val destroy : i -> unit
+  val count  : C.query -> Unsigned.UInt.t ptr -> C.status
+  val search : C.query -> i ptr -> C.status
+
+  module I : Iterate.M with type el := el and type ptr := i
 end
 
 module type Exec = sig
@@ -91,90 +89,59 @@ module type Exec = sig
   val iter   : db -> t -> f:(tmp -> unit) -> unit
 end
 
-module F (I : Iterator) : (Exec with type tmp := I.el) = struct
-(* TODO: destroy queries *)
-
+module F (A : Result) : (Exec with type tmp := A.el) = struct
   let count db query =
-    (* execute count *)
-    let exec final =
-      let cnt_ptr = allocate uint Unsigned.UInt.zero in
-      match I.count final cnt_ptr with
-      | 0 -> !@cnt_ptr
-             (* TODO: Get error from db and fail appropriatly *)
-      | _ -> raise (Failure "Query execution failed")
-    in
-    finalize db query |> exec |> Unsigned.UInt.to_int
+    let cnt_ptr = allocate uint Unsigned.UInt.zero in
+    let q = finalize db query in
+    let () = A.count q cnt_ptr |> Status.throw in
+    let () = C.query_destroy q in
+    Unsigned.UInt.to_int !@cnt_ptr
+
+  let search db query =
+    let res_ptr = allocate A.i_t A.null in
+    let q = finalize db query in
+    let () = A.search q res_ptr |> Status.throw in
+    let () = C.query_destroy q in
+    !@res_ptr
 
   let fold db query ~init ~f =
-    (* execute search *)
-    let exec final =
-      let res_ptr = allocate I.i_t I.null in
-      match I.exec final res_ptr with
-      | 0 -> !@res_ptr
-             (* TODO: Get error from db and fail appropriatly *)
-      | _ -> raise (Failure "Query execution failed")
-    in
-    let i = finalize db query |> exec in
-    (* iterate and build list *)
-    let rec h acc =
-      if I.valid i then
-        let el = I.get i in
-        I.move i ;
-        h (f acc el)
-      else
-        acc
-    in
-    let res = h init in
-    (* destroy c iterator object and thereby all elements
-     * everyting in the c world will be lost from here on
-     *)
-    I.destroy i ;
-    res
+    search db query |> A.I.fold ~init ~f
 
   let map db query ~f =
-    let init = [] in
-    let f acc e = (f e) :: acc in
-    fold db query ~init ~f |> List.rev
+    search db query |> A.I.map ~f
 
   let iter db query ~f =
-    let init = () in
-    let f acc e = f e in
-    fold db query ~init ~f
+    search db query |> A.I.iter ~f
 end
 
-(* Message Iterator *)
-module IM : (Iterator with type el = C.message) = struct
+(* Result: Messages *)
+module Mes : (Result with type el = C.message) = struct
   type i  = C.messages
   type el = C.message
 
   let i_t = C.messages_t
   let null = null
 
-  let count= C.query_count_messages ;;
-  let exec = C.query_search_messages ;;
-  let valid = C.messages_valid ;;
-  let get = C.messages_get ;;
-  let move = C.messages_move_to_next ;;
-  let destroy = C.messages_destroy ;;
-end
+  let count = C.query_count_messages
+  let search = C.query_search_messages
 
-(* Thread Iterator *)
-module IT : (Iterator with type el = C.thread) = struct
+  module I = Iterate.Messages
+end
+module Messages = F(Mes)
+
+(* Result: Threads *)
+module Thr : (Result with type el = C.thread) = struct
   type i  = C.threads
   type el = C.thread
 
   let i_t = C.threads_t
   let null = null
 
-  let count= C.query_count_threads ;;
-  let exec = C.query_search_threads ;;
-  let valid = C.threads_valid ;;
-  let get = C.threads_get ;;
-  let move = C.threads_move_to_next ;;
-  let destroy = C.threads_destroy ;;
-end
+  let count = C.query_count_threads
+  let search = C.query_search_threads
 
-module Messages = F(IM)
-module Threads  = F(IT)
+  module I = Iterate.Threads
+end
+module Threads  = F(Thr)
 
 
