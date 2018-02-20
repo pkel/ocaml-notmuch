@@ -1,11 +1,10 @@
-(executables
- ((libraries (notmuch))
-  (names (tests))
-  (modules
-   (tests))))
+(jbuild_version 1)
+
+(executable
+ ((name test)
+  (libraries (notmuch))))
 
 (alias
  ((name runtest)
   (package notmuch)
-  (deps (tests.exe))
-  (action (run ${<}))))
+  (action (run test.exe))))

@@ -2,7 +2,7 @@
 
 (library
  ((name notmuch)
+  (synopsis "notmuch bindings")
   (libraries (ctypes ctypes.foreign))
   (library_flags (-cclib -lnotmuch))
-  (synopsis "notmuch bindings")
   ))

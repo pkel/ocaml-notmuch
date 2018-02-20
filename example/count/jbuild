@@ -1,8 +1,9 @@
-(executables
- ((libraries (notmuch core))
-  (names (count))
-  (preprocess (pps (ppx_jane ppx_driver.runner)))
-  (modules (count))))
+(jbuild_version 1)
+
+(executable
+ ((name count)
+  (libraries (notmuch core))
+  (preprocess (pps (ppx_jane ppx_driver.runner)))))
 
 (rule
   (with-stdout-to data.should (run notmuch count --lastmod --exclude=false)))
