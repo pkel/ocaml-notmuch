@@ -50,6 +50,12 @@ let revision_of_string str =
     Some ( uuid , Unsigned.ULong.of_string revs )
   with _ -> None
 
+(* val uuid_of_revision : revision -> string *)
+let uuid_of_revision (uuid,_) =  uuid
+
+(* val nr_of_revision   : revision -> string *)
+let nr_of_revision (_, nr) = Unsigned.ULong.to_string nr
+
 let get_all_tags db =
   (* get c tags object *)
   let r = C.database_get_all_tags db in
