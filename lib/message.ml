@@ -2,6 +2,9 @@ type t = C.message
 
 let throw = Status.throw
 
+let get_id msg =
+  C.message_get_message_id msg
+
 (* val get_tags : t -> string list *)
 let get_tags msg =
   let tags = C.message_get_tags msg in

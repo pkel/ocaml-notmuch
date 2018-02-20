@@ -1,5 +1,7 @@
 type t = C.message
 
+val get_id : t -> string
+
 val get_tags : t -> string list
 
 val set_tags : t -> string list -> unit
