@@ -1,0 +1,16 @@
+(executables
+ ((libraries (notmuch core))
+  (names (count))
+  (preprocess (pps (ppx_jane ppx_driver.runner)))
+  (modules (count))))
+
+(rule
+  (with-stdout-to data.should (run notmuch count --lastmod --exclude=false)))
+
+(rule
+  (with-stdout-to data.is (run ./count.exe -lastmod)))
+
+(alias
+ ((name runtest)
+  (package notmuch)
+  (action (diff data.should data.is))))
