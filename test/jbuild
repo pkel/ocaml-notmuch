@@ -7,4 +7,4 @@
 (alias
  ((name runtest)
   (package notmuch)
-  (action (run test.exe))))
+  (action (run ./test.exe))))
