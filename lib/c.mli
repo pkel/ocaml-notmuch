@@ -48,6 +48,10 @@ val database_close : database -> status
 val database_get_revision : database -> string ptr -> Unsigned.ULong.t
 val database_get_all_tags : database -> tags
 
+(** Add / remove filenames from database *)
+val database_add_message : database -> string -> messages ptr -> status
+val database_remove_message : database -> string -> status
+
 (** Querying *)
 val query_create : database -> string -> query
 val query_get_query_string : query -> string

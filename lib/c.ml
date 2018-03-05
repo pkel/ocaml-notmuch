@@ -56,6 +56,14 @@ let database_get_all_tags =
   foreign "notmuch_database_get_all_tags"
     (database_t @-> returning tags_t)
 
+let database_add_message =
+  foreign "notmuch_database_add_message"
+    (database_t @-> string @-> ptr message_t @-> returning status_t)
+
+let database_remove_message =
+  foreign "notmuch_database_remove_message"
+    (database_t @-> string @-> returning status_t)
+
 let query_create =
   foreign "notmuch_query_create"
     (database_t @-> string @-> returning query_t)

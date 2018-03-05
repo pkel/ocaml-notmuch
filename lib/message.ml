@@ -28,3 +28,11 @@ let set_tags msg lst =
   C.message_remove_all_tags msg |> throw ;
   add_tags msg lst ;
   C.message_thaw msg |> throw
+
+(* val get_filenames : t -> string list *)
+let get_filenames msg =
+  let tags = C.message_get_filenames msg in
+  let f x = x in
+  Iterate.Filenames.map tags ~f
+
+
