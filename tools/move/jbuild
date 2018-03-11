@@ -4,4 +4,4 @@
  ((name main)
   (public_name notmuch-move)
   (libraries (notmuch core fileutils))
-  (preprocess (pps (ppx_jane ppx_driver.runner)))))
+  (preprocess (pps (ppx_jane ppx_driver.runner ppx_sexp_conv ppx_deriving)))))

@@ -1,5 +1,6 @@
 open Core
 open Notmuch
+open Rules
 
 let db_loc = "/home/patrik/mail"
 
@@ -8,38 +9,30 @@ let get_db () =
   | None -> failwith "Could not open database"
   | Some db -> db
 
-type tag = string
-type folder = string
-type selector = tag list
-
-type rule =
-  | Add of folder
-  | Fst of (selector * rule) list
-  | All of (selector * rule) list
-
-let default = []
-let tag s = [s]
+let tag_folder s f = Filter ([s], Folder f)
 
 let folder_per_tag ?(all=false) ?(prefix="") tags =
-  let f s = tag s , Add (prefix ^ s) in
+  let open Rules in
+  let f s = tag_folder s (prefix ^ s) in
   let rules = List.map ~f tags in
-  if all then All rules else Fst rules
+  if all then All rules else First rules
 
-let folder_rule : rule =
+let folder_rule : Rules.t =
+  let open Rules in
   All [
-    tag "todo" , Add "hetzner/todo" ;
-    default    , Fst [
-      tag "spam"  , Add "hetzner/spambucket" ;
-      tag "trash" , Add "hetzner/Trash" ;
-      tag "inbox" , Fst [
-        tag "uibk"    , Add "uibk/INBOX" ;
-        tag "student" , Add "uibk-student/INBOX" ;
-        default       , Add "hetzner/INBOX" ] ;
-      tag "sent"  , All [
-        tag "uibk"    , Add "uibk/Sent" ;
-        tag "student" , Add "uibk-student/Sent" ;
-        tag "private" , Add "hetzner/Sent" ] ;
-      default     , folder_per_tag  ~all:true ~prefix:"hetzner/" [
+    tag_folder "todo" "hetzner/todo" ;
+    First [
+      tag_folder "spam"  "hetzner/spambucket" ;
+      tag_folder "trash" "hetzner/Trash" ;
+      Filter (["inbox"] , First [
+        tag_folder "uibk"    "uibk/INBOX" ;
+        tag_folder "student" "uibk-student/INBOX" ;
+        Folder "hetzner/INBOX" ] ) ;
+      Filter (["sent"]  , All [
+        tag_folder "uibk"    "uibk/Sent" ;
+        tag_folder "student" "uibk-student/Sent" ;
+        tag_folder "private" "hetzner/Sent" ] ) ;
+      folder_per_tag  ~all:true ~prefix:"hetzner/" [
         "notif"; "order"; "invoice"; "masterthesis"; "booking" ] ]
   ]
 
@@ -55,20 +48,23 @@ let tag_set_of_message msg =
 let folders rule msg =
   let open Set in
   let msg_tags = tag_set_of_message msg in
-  let rec h acc rule =
-    let f (selector, rule) =
-      (* apply rule if selector triggers *)
-      if of_list selector |> is_subset ~of_:msg_tags
-      then Some (h acc rule)
-      else None
-    in
+  let rec h folders rule =
+    let open Rules in
     match rule with
-    | Fst lst -> List.find_map ~f lst |> Option.value ~default:acc
-    | All lst -> List.filter_map ~f lst |> List.fold ~init:acc ~f:union
-    | Add folder -> add acc folder
+    | Folder f -> Some (add folders f)
+    | Filter (sel, rule) ->
+        if of_list sel |> is_subset ~of_:msg_tags
+        then h folders rule
+        else None
+    | First lst -> List.find_map ~f:(h folders) lst
+    | All   lst ->
+        match List.filter_map ~f:(h empty) lst with
+        | [] -> None
+        | l  -> Some (List.fold ~init:folders ~f:union l)
   in
-  let ret = h empty rule in
-  if is_empty ret then singleton default_folder else ret
+  match h empty rule with
+  | None -> singleton default_folder
+  | Some set -> set
 
 type mds =
   | Cur
@@ -131,6 +127,12 @@ let rm src =
 let mover move verbose query =
   let open Set in
   let db = get_db () in
+  (* echo config *)
+  let () =
+    Rules.sexp_of_t folder_rule
+    |> Sexp.to_string_hum
+    |> print_endline
+  in
   (* per message *)
   let f msg =
     let target = folders folder_rule msg in
