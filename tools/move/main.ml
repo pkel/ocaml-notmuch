@@ -3,6 +3,7 @@ open Notmuch
 open Rules
 
 let db_loc = "/home/patrik/mail"
+let cfg_loc = "tools/move/cfg.scm"
 
 let get_db () =
   match Database.open_ db_loc with
@@ -16,27 +17,6 @@ let folder_per_tag ?(all=false) ?(prefix="") tags =
   let f s = tag_folder s (prefix ^ s) in
   let rules = List.map ~f tags in
   if all then All rules else First rules
-
-let folder_rule : Rules.t =
-  let open Rules in
-  All [
-    tag_folder "todo" "hetzner/todo" ;
-    First [
-      tag_folder "spam"  "hetzner/spambucket" ;
-      tag_folder "trash" "hetzner/Trash" ;
-      Filter (["inbox"] , First [
-        tag_folder "uibk"    "uibk/INBOX" ;
-        tag_folder "student" "uibk-student/INBOX" ;
-        Folder "hetzner/INBOX" ] ) ;
-      Filter (["sent"]  , All [
-        tag_folder "uibk"    "uibk/Sent" ;
-        tag_folder "student" "uibk-student/Sent" ;
-        tag_folder "private" "hetzner/Sent" ] ) ;
-      folder_per_tag  ~all:true ~prefix:"hetzner/" [
-        "notif"; "order"; "invoice"; "masterthesis"; "booking" ] ]
-  ]
-
-let default_folder = "hetzner/default"
 
 module Set = Set.Make(String)
 
@@ -62,9 +42,7 @@ let folders rule msg =
         | [] -> None
         | l  -> Some (List.fold ~init:folders ~f:union l)
   in
-  match h empty rule with
-  | None -> singleton default_folder
-  | Some set -> set
+  h empty rule
 
 type mds =
   | Cur
@@ -127,15 +105,15 @@ let rm src =
 let mover move verbose query =
   let open Set in
   let db = get_db () in
+  let rules = Rules.from_file cfg_loc in
   (* echo config *)
   let () =
-    Rules.sexp_of_t folder_rule
+    Rules.sexp_of_t rules
     |> Sexp.to_string_hum
     |> print_endline
   in
   (* per message *)
-  let f msg =
-    let target = folders folder_rule msg in
+  let move target msg =
     (* fold filenames of msg *)
     let init = (None, target, []) in
     let ff (_, to_add, to_delete) path =
@@ -160,8 +138,18 @@ let mover move verbose query =
       List.iter ~f:rm to_delete
     end
   in
+  let unmatched = ref 0 in
+  let f msg =
+    match folders rules msg with
+    | None -> unmatched := !unmatched + 1
+    | Some t -> move t msg
+  in
   let open Query in
-  from_string query |> Messages.iter ~f db
+  from_string query |> Messages.iter ~f db ;
+  if !unmatched > 0 then
+    Printf.eprintf
+      "WARNING: Insufficient rules. Ignored %d unmatched messages.\n"
+      !unmatched
 
 let () =
   let open Command.Let_syntax in

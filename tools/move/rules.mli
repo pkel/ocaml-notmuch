@@ -9,3 +9,5 @@ type t =
   | All    of t list
   | First  of t list
   [@@deriving sexp]
+
+val from_file : string -> t
