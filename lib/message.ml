@@ -11,6 +11,11 @@ let get_tags msg =
   let f x = x in
   Iterate.Tags.map tags ~f
 
+(* val fold_tags : t -> init:'a -> f:('a -> string -> 'a) -> 'a *)
+let fold_tags msg ~init ~f =
+  C.message_get_tags msg
+  |> Iterate.Tags.fold ~init ~f
+
 (* val add_tags : t -> string list -> unit *)
 let add_tags msg lst =
   let f tag = C.message_add_tag msg tag |> throw in
@@ -28,6 +33,11 @@ let set_tags msg lst =
   C.message_remove_all_tags msg |> throw ;
   add_tags msg lst ;
   C.message_thaw msg |> throw
+
+(* val fold_filenames : t -> init:'a -> f:('a -> string -> 'a) -> 'a *)
+let fold_filenames msg ~init ~f =
+  C.message_get_filenames msg
+  |> Iterate.Filenames.fold ~init ~f
 
 (* val get_filenames : t -> string list *)
 let get_filenames msg =

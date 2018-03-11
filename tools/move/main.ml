@@ -19,7 +19,6 @@ type rule =
 
 let default = []
 let tag s = [s]
-let tags l = l
 
 let folder_per_tag ?(all=false) ?(prefix="") tags =
   let f s = tag s , Add (prefix ^ s) in
@@ -41,20 +40,25 @@ let folder_rule : rule =
         tag "student" , Add "uibk-student/Sent" ;
         tag "private" , Add "hetzner/Sent" ] ;
       default     , folder_per_tag  ~all:true ~prefix:"hetzner/" [
-        "order"; "invoice"; "masterthesis"; "booking" ] ]
+        "notif"; "order"; "invoice"; "masterthesis"; "booking" ] ]
   ]
 
 let default_folder = "hetzner/default"
 
 module Set = Set.Make(String)
 
+let tag_set_of_message msg =
+  let f = Set.add in
+  let init = Set.empty in
+  Message.fold_tags ~f ~init msg
+
 let folders rule msg =
   let open Set in
-  let msg_tags = Message.get_tags msg |> of_list in
+  let msg_tags = tag_set_of_message msg in
   let rec h acc rule =
     let f (selector, rule) =
       (* apply rule if selector triggers *)
-      if is_subset (of_list selector) ~of_:msg_tags
+      if of_list selector |> is_subset ~of_:msg_tags
       then Some (h acc rule)
       else None
     in
@@ -63,9 +67,8 @@ let folders rule msg =
     | All lst -> List.filter_map ~f lst |> List.fold ~init:acc ~f:union
     | Add folder -> add acc folder
   in
-  match h empty rule |> to_list with
-  | [] -> [ default_folder ]
-  | lst -> lst
+  let ret = h empty rule in
+  if is_empty ret then singleton default_folder else ret
 
 type mds =
   | Cur
@@ -121,40 +124,38 @@ let copy src dst =
   (* TODO: This can fail *)
   FileUtil.cp [filepath_of_location src] dst
 
-let remove src =
+let rm src =
   (* TODO: This can fail *)
   FileUtil.rm [filepath_of_location src]
 
 let mover move verbose query =
+  let open Set in
   let db = get_db () in
+  (* per message *)
   let f msg =
-    (* parse filepaths *)
-    let locations =
-      Message.get_filenames msg |>
-      List.map ~f:location_of_filepath
+    let target = folders folder_rule msg in
+    (* fold filenames of msg *)
+    let init = (None, target, []) in
+    let ff (_, to_add, to_delete) path =
+      let loc = location_of_filepath path in
+      let to_add = remove to_add loc.folder in
+      let to_delete =
+        if not (mem target loc.folder)
+        then loc :: to_delete
+        else to_delete
+      in
+      (Some loc, to_add, to_delete)
     in
-    (* calculate diff *)
-    let was = List.map ~f:(fun x -> x.folder) locations in
-    let will = folders folder_rule msg in
-    let equal a b = if Pervasives.compare a b = 0 then true else false in
-    let del =
-      List.filter
-        ~f:(fun x -> not (List.mem ~equal will x.folder))
-        locations
-    in
-    let add =
-      List.filter
-        ~f:(fun x -> not (List.mem ~equal was  x))
-        will
-    in
+    let fp, to_add, to_delete = Message.fold_filenames ~f:ff ~init msg in
     (* action *)
-    if verbose then describe msg add del ;
+    if verbose then describe msg (to_list to_add) to_delete ;
     if move then begin
-      let src = List.nth_exn locations 0 in
+      (* This might trigger where messages don't have any filename *)
+      let src = Option.value_exn fp in
       (* first add .. *)
-      List.iter ~f:(copy src) add ;
+      Set.iter ~f:(copy src) to_add ;
       (* .. then remove filenames *)
-      List.iter ~f:remove del
+      List.iter ~f:rm to_delete
     end
   in
   let open Query in
