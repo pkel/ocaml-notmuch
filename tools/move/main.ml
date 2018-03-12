@@ -1,13 +1,6 @@
 open Core
 open Notmuch
 
-let db_loc = "/home/patrik/mail"
-
-let get_db () =
-  match Database.open_ db_loc with
-  | None -> failwith "Could not open database"
-  | Some db -> db
-
 type tag = string
 type folder = string
 type selector = tag list
@@ -78,18 +71,19 @@ let mds_to_string = function
   | New -> "new"
 
 type location =
-  { folder: string
+  { base: string
+  ; folder: string
   ; state: mds
   ; file: string
   }
 
-let relative = FilePath.make_relative db_loc
-let absolute = FilePath.make_absolute db_loc
+let relative = FilePath.make_relative
+let absolute = FilePath.make_absolute
 
-let location_of_filepath fp =
+let location_of_filepath ~base fp =
   let file = FilePath.basename fp in
   let dir = FilePath.dirname fp in
-  let folder = FilePath.dirname dir |> relative in
+  let folder = FilePath.dirname dir |> relative base in
   let state =
     match FilePath.basename dir with
     | "cur" -> Cur
@@ -97,12 +91,12 @@ let location_of_filepath fp =
     | "new" -> New
     | _ -> Printf.sprintf "Invalid FilePath: %s" fp |> failwith
   in
-  { file; state; folder }
+  { base; file; state; folder }
 
-let filepath_of_location { file; state; folder } =
+let filepath_of_location { base; file; state; folder } =
   let d = mds_to_string state in
   FilePath.make_filename [ folder; d; file ]
-    |> absolute
+    |> absolute base
 
 let describe msg add del =
   let open Printf in
@@ -117,7 +111,7 @@ let describe msg add del =
   List.iter ~f:plus add
 
 let copy src dst =
-  let dst = FilePath.make_filename [ dst; mds_to_string src.state ] in
+  let dst = FilePath.make_filename [ src.base; dst; mds_to_string src.state ] in
   (* TODO: This can fail *)
   FileUtil.cp [filepath_of_location src] dst
 
@@ -125,13 +119,12 @@ let remove src =
   (* TODO: This can fail *)
   FileUtil.rm [filepath_of_location src]
 
-let mover move verbose query =
-  let db = get_db () in
+let mover ~move ~verbose ~srch_str db =
+  let to_loc = location_of_filepath ~base:(Database.get_path db) in
   let f msg =
     (* parse filepaths *)
     let locations =
-      Message.get_filenames msg |>
-      List.map ~f:location_of_filepath
+      Message.get_filenames msg |> List.map ~f:to_loc
     in
     (* calculate diff *)
     let was = List.map ~f:(fun x -> x.folder) locations in
@@ -158,7 +151,17 @@ let mover move verbose query =
     end
   in
   let open Query in
-  from_string query |> Messages.iter ~f db
+  from_string srch_str |> Messages.iter ~f db
+
+let with_db f =
+  let open Printf in
+  let open Ext.Result in
+  fun () -> Config.load ()
+  |> and_then ~f:(Config.get ~section:"database" ~key:"path")
+  |> and_then_opt ~err:"Failed to open database" ~f:Database.open_
+  |> function
+    | Error e -> eprintf "%s\n" e
+    | Ok db -> f db
 
 let () =
   let open Command.Let_syntax in
@@ -167,12 +170,13 @@ let () =
     [%map_open
       let move  = flag "move"  no_arg ~doc:"Move instead of dry run"
       and quiet = flag "quiet" no_arg ~doc:"Don't print actions"
-      and srch_lst = anon (sequence ("search-term" %: string)) in
-      fun () ->
-        let srch_str =
-          match srch_lst with
-          | [] -> "*"
-          | l  -> String.concat ~sep:" " l
-        in
-        mover move (not quiet) srch_str
+      and srch_lst = anon (sequence ("search-term" %: string))
+      in
+      let srch_str =
+        match srch_lst with
+        | [] -> "*"
+        | l  -> String.concat ~sep:" " l
+      in
+      let verbose = not quiet in
+      mover ~move ~verbose ~srch_str |> with_db
     ] |> Command.run

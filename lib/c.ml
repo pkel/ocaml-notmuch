@@ -56,6 +56,10 @@ let database_get_all_tags =
   foreign "notmuch_database_get_all_tags"
     (database_t @-> returning tags_t)
 
+let database_get_path =
+  foreign "notmuch_database_get_path"
+    (database_t @-> returning string)
+
 let database_add_message =
   foreign "notmuch_database_add_message"
     (database_t @-> string @-> ptr message_t @-> returning status_t)

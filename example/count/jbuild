@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
 (executable
- ((name count)
+ ((name main)
   (libraries (notmuch core))
   (preprocess (pps (ppx_jane ppx_driver.runner)))))
 
@@ -9,7 +9,7 @@
   (with-stdout-to data.should (run notmuch count --lastmod --exclude=false)))
 
 (rule
-  (with-stdout-to data.is (run ./count.exe -lastmod)))
+  (with-stdout-to data.is (run ./main.exe -lastmod)))
 
 (alias
  ((name runtest)
