@@ -104,14 +104,8 @@ let mover ~move ~verbose ~srch_str db =
   let cfg_loc = "tools/move/cfg.scm" in
   let to_location = location_of_filepath ~base:(Database.get_path db) in
   let rules = Rules.from_file cfg_loc in
-  (* echo config *)
-  let () =
-    Rules.sexp_of_t rules
-    |> Sexp.to_string_hum
-    |> print_endline
-  in
   (* per message *)
-  let move target msg =
+  let work target msg =
     (* fold filenames of msg *)
     let init = (None, target, []) in
     let ff (_, to_add, to_delete) path =
@@ -136,18 +130,18 @@ let mover ~move ~verbose ~srch_str db =
       List.iter ~f:rm to_delete
     end
   in
-  let unmatched = ref 0 in
-  let f msg =
+  (* fold messages and count rule failures *)
+  let f acc msg =
     match folders rules msg with
-    | None -> unmatched := !unmatched + 1
-    | Some t -> move t msg
+    | None -> acc + 1
+    | Some on -> work on msg ; acc
   in
   let open Query in
-  from_string srch_str |> Messages.iter ~f db ;
-  if !unmatched > 0 then
+  let nfails = from_string srch_str |> Messages.fold ~init:0 ~f db in
+  if nfails > 0 then
     Printf.eprintf
       "WARNING: Insufficient rules. Ignored %d unmatched messages.\n"
-      !unmatched
+      nfails
 
 let with_db f =
   let open Printf in
