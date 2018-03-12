@@ -10,7 +10,7 @@ let act file =
     List.iter ~f:itm items
   in
   match Config.from_file file with
-  | Err err -> print_endline err
+  | Error err -> print_endline err
   | Ok cfg -> List.iter ~f:sec cfg
 
 let () =
