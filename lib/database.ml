@@ -75,3 +75,5 @@ let get_all_tags db =
   C.tags_destroy r ;
   (* return list *)
   List.rev tags
+
+let get_path = C.database_get_path

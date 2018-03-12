@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
 (executable
- ((name dump)
+ ((name main)
   (libraries (notmuch core))
   (preprocess (pps (ppx_jane ppx_driver.runner)))))
 
@@ -9,7 +9,7 @@
   (with-stdout-to data.should (run notmuch dump --include=tags)))
 
 (rule
-  (with-stdout-to data.is (run ./dump.exe)))
+  (with-stdout-to data.is (run ./main.exe)))
 
 (alias
  ((name runtest)

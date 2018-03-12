@@ -47,6 +47,7 @@ val database_open : string -> database_mode -> database ptr -> status
 val database_close : database -> status
 val database_get_revision : database -> string ptr -> Unsigned.ULong.t
 val database_get_all_tags : database -> tags
+val database_get_path : database -> string
 
 (** Add / remove filenames from database *)
 val database_add_message : database -> string -> messages ptr -> status

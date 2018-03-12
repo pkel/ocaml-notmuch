@@ -68,7 +68,6 @@ let count_all_messages db =
   from_string "*" |> Messages.count db
 
 let act_on db =
-  print_endline "Database opened" ;
   print_revision db ;
   print_all_tags db ;
   count_all_messages db |> Printf.printf "Message count: %d\n" ;
@@ -77,7 +76,13 @@ let act_on db =
   Database.close db
 
 let () =
-  match Database.open_ "/home/patrik/mail/" with
-  | None -> print_endline "failed to open database"
-  | Some db -> act_on db
+  let open Printf in
+  let open Ext.Result in
+  Config.load ()
+  |> and_then ~f:(Config.get ~section:"database" ~key:"path")
+  |> and_then_opt ~err:"Failed to open database" ~f:Database.open_
+  |> function
+    | Error e -> eprintf "%s\n" e
+    | Ok db -> act_on db
+
 

@@ -7,6 +7,9 @@ val open_ : ?write:bool -> string -> t option
 (** commit changes and close database *)
 val close : t -> unit
 
+(** get base folder *)
+val get_path : t -> string
+
 (** opaque revision handling *)
 type revision
 

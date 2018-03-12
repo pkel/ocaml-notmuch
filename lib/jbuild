@@ -6,3 +6,9 @@
   (libraries (ctypes ctypes.foreign))
   (library_flags (-cclib -lnotmuch))
   ))
+
+(menhir
+ ((modules (config_parser))
+  (flags (--explain))))
+
+(ocamllex (config_lexer))

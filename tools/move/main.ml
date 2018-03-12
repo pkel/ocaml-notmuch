@@ -2,13 +2,9 @@ open Core
 open Notmuch
 open Rules
 
-let db_loc = "/home/patrik/mail"
-let cfg_loc = "tools/move/cfg.scm"
-
-let get_db () =
-  match Database.open_ db_loc with
-  | None -> failwith "Could not open database"
-  | Some db -> db
+let default = []
+let tag s = [s]
+let tags l = l
 
 let tag_folder s f = Filter ([s], Folder f)
 
@@ -55,18 +51,19 @@ let mds_to_string = function
   | New -> "new"
 
 type location =
-  { folder: string
+  { base: string
+  ; folder: string
   ; state: mds
   ; file: string
   }
 
-let relative = FilePath.make_relative db_loc
-let absolute = FilePath.make_absolute db_loc
+let relative = FilePath.make_relative
+let absolute = FilePath.make_absolute
 
-let location_of_filepath fp =
+let location_of_filepath ~base fp =
   let file = FilePath.basename fp in
   let dir = FilePath.dirname fp in
-  let folder = FilePath.dirname dir |> relative in
+  let folder = FilePath.dirname dir |> relative base in
   let state =
     match FilePath.basename dir with
     | "cur" -> Cur
@@ -74,12 +71,12 @@ let location_of_filepath fp =
     | "new" -> New
     | _ -> Printf.sprintf "Invalid FilePath: %s" fp |> failwith
   in
-  { file; state; folder }
+  { base; file; state; folder }
 
-let filepath_of_location { file; state; folder } =
+let filepath_of_location { base; file; state; folder } =
   let d = mds_to_string state in
   FilePath.make_filename [ folder; d; file ]
-    |> absolute
+    |> absolute base
 
 let describe msg add del =
   let open Printf in
@@ -94,7 +91,7 @@ let describe msg add del =
   List.iter ~f:plus add
 
 let copy src dst =
-  let dst = FilePath.make_filename [ dst; mds_to_string src.state ] in
+  let dst = FilePath.make_filename [ src.base; dst; mds_to_string src.state ] in
   (* TODO: This can fail *)
   FileUtil.cp [filepath_of_location src] dst
 
@@ -102,9 +99,10 @@ let rm src =
   (* TODO: This can fail *)
   FileUtil.rm [filepath_of_location src]
 
-let mover move verbose query =
+let mover ~move ~verbose ~srch_str db =
   let open Set in
-  let db = get_db () in
+  let cfg_loc = "tools/move/cfg.scm" in
+  let to_location = location_of_filepath ~base:(Database.get_path db) in
   let rules = Rules.from_file cfg_loc in
   (* echo config *)
   let () =
@@ -117,7 +115,7 @@ let mover move verbose query =
     (* fold filenames of msg *)
     let init = (None, target, []) in
     let ff (_, to_add, to_delete) path =
-      let loc = location_of_filepath path in
+      let loc = to_location path in
       let to_add = remove to_add loc.folder in
       let to_delete =
         if not (mem target loc.folder)
@@ -145,11 +143,21 @@ let mover move verbose query =
     | Some t -> move t msg
   in
   let open Query in
-  from_string query |> Messages.iter ~f db ;
+  from_string srch_str |> Messages.iter ~f db ;
   if !unmatched > 0 then
     Printf.eprintf
       "WARNING: Insufficient rules. Ignored %d unmatched messages.\n"
       !unmatched
+
+let with_db f =
+  let open Printf in
+  let open Ext.Result in
+  fun () -> Config.load ()
+  |> and_then ~f:(Config.get ~section:"database" ~key:"path")
+  |> and_then_opt ~err:"Failed to open database" ~f:Database.open_
+  |> function
+    | Error e -> eprintf "%s\n" e
+    | Ok db -> f db
 
 let () =
   let open Command.Let_syntax in
@@ -158,12 +166,13 @@ let () =
     [%map_open
       let move  = flag "move"  no_arg ~doc:"Move instead of dry run"
       and quiet = flag "quiet" no_arg ~doc:"Don't print actions"
-      and srch_lst = anon (sequence ("search-term" %: string)) in
-      fun () ->
-        let srch_str =
-          match srch_lst with
-          | [] -> "*"
-          | l  -> String.concat ~sep:" " l
-        in
-        mover move (not quiet) srch_str
+      and srch_lst = anon (sequence ("search-term" %: string))
+      in
+      let srch_str =
+        match srch_lst with
+        | [] -> "*"
+        | l  -> String.concat ~sep:" " l
+      in
+      let verbose = not quiet in
+      mover ~move ~verbose ~srch_str |> with_db
     ] |> Command.run
