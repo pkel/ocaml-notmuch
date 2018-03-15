@@ -1,4 +1,4 @@
-open Sexplib.Std
+open Core
 
 type tag = string [@@deriving sexp]
 type selector = tag list [@@deriving sexp]

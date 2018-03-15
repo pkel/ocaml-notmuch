@@ -2,8 +2,10 @@
 
 (library
  ((name notmuch)
+  (public_name notmuch)
   (synopsis "notmuch bindings")
   (libraries (ctypes ctypes.foreign))
+  (virtual_deps (ctypes-foreign menhir))
   (library_flags (-cclib -lnotmuch))
   ))
 
