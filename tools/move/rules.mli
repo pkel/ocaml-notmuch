@@ -1,7 +1,7 @@
 open Core
 
-type tag = string [@@deriving sexp]
-type selector = tag list [@@deriving sexp]
+type tag = string
+type selector = tag list
 
 (** The rule data structure resembles a decision tree with priotized children.
  *  Folder <name> corresponds to a leave. Messages reaching this leave are
@@ -18,6 +18,5 @@ type t =
   | All    of t list
   | First  of t list
   | FolderPerTag of string
-  [@@deriving sexp]
 
 val from_file : string -> t
