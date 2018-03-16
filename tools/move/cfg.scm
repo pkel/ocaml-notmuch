@@ -14,15 +14,16 @@
        (Filter (student) (Folder uibk-student/Sent))
        (Filter (private) (Folder hetzner/Sent)))))
     (All
-     ((Filter (notif) (Folder hetzner/notif))
-      (Filter (order) (Folder hetzner/order))
+     ((Filter (order) (Folder hetzner/order))
       (Filter (invoice) (Folder hetzner/invoice))
       (Filter (masterthesis) (Folder hetzner/masterthesis))
       (Filter (booking) (Folder hetzner/booking))))
+      (Filter (notif) (Folder archive/notifications))
+      (Filter (list) (First
+       ((Filter (ocaml) (Folder archive/lists/ocaml))
+        (Folder archives/lists/fallback))))
     (All
-     ((Filter (notif) (Folder archives/notifications))
-      (Filter (list)
-      (First
-       ((Filter (ocaml) (Folder archives/lists/ocaml))
-        (Folder archives/lists/fallback))))))
-    (Folder hetzner/fallback)))))
+     ((Filter (uibk) (Folder uibk/archive))
+      (Filter (student) (Folder uibk-student/archive))
+      (Filter (private) (Folder hetzner/archive))))
+    (Folder archive/insufficient-tags)))))
