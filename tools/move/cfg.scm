@@ -19,4 +19,10 @@
       (Filter (invoice) (Folder hetzner/invoice))
       (Filter (masterthesis) (Folder hetzner/masterthesis))
       (Filter (booking) (Folder hetzner/booking))))
-    (Folder hetzner/default)))))
+    (All
+     ((Filter (notif) (Folder archives/notifications))
+      (Filter (list)
+      (First
+       ((Filter (ocaml) (Folder archives/lists/ocaml))
+        (Folder archives/lists/fallback))))))
+    (Folder hetzner/fallback)))))
