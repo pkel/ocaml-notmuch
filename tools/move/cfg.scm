@@ -21,9 +21,4 @@
       (Filter (notif) (Folder archive/notifications))
       (Filter (list) (First
        ((Filter (ocaml) (Folder archive/lists/ocaml))
-        (Folder archives/lists/fallback))))
-    (All
-     ((Filter (uibk) (Folder uibk/archive))
-      (Filter (student) (Folder uibk-student/archive))
-      (Filter (private) (Folder hetzner/archive))))
-    (Folder archive/insufficient-tags)))))
+        (Folder archives/lists/fallback))))))))

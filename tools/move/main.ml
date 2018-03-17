@@ -28,6 +28,7 @@ let folders rule msg =
     let open Rules in
     match rule with
     | Folder f -> Some (add folders f)
+    | FolderPerTag prefix -> Some(folders)
     | Filter (sel, rule) ->
         if of_list sel |> is_subset ~of_:msg_tags
         then h folders rule
@@ -92,12 +93,16 @@ let describe msg add del =
 
 let copy src dst =
   let dst = FilePath.make_filename [ src.base; dst; mds_to_string src.state ] in
+  let src = filepath_of_location src in
+  printf "cp %s %s\n" src dst
   (* TODO: This can fail *)
-  FileUtil.cp [filepath_of_location src] dst
+  (* FileUtil.cp src dst *)
 
 let rm src =
+  let src = filepath_of_location src in
+  printf "rm %s\n" src
   (* TODO: This can fail *)
-  FileUtil.rm [filepath_of_location src]
+  (* FileUtil.rm [filepath_of_location src] *)
 
 let mover ~move ~verbose ~srch_str db =
   let open Set in
