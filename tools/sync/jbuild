@@ -1,0 +1,7 @@
+(jbuild_version 1)
+
+(executable
+ ((name main)
+  (public_name notmuch-sync)
+  (libraries (notmuch core irmin-unix))
+  (preprocess (pps (ppx_jane ppx_driver.runner)))))
