@@ -1,18 +1,9 @@
 open Core
 open Notmuch
-open Rules
 
 let default = []
 let tag s = [s]
 let tags l = l
-
-let tag_folder s f = Filter ([s], Folder f)
-
-let folder_per_tag ?(all=false) ?(prefix="") tags =
-  let open Rules in
-  let f s = tag_folder s (prefix ^ s) in
-  let rules = List.map ~f tags in
-  if all then All rules else First rules
 
 module Set = Set.Make(String)
 
@@ -41,47 +32,9 @@ let folders rule msg =
   in
   h empty rule
 
-type mds =
-  | Cur
-  | New
-  | Tmp
-
-let mds_to_string = function
-  | Cur -> "cur"
-  | Tmp -> "tmp"
-  | New -> "new"
-
-type location =
-  { base: string
-  ; folder: string
-  ; state: mds
-  ; file: string
-  }
-
-let relative = FilePath.make_relative
-let absolute = FilePath.make_absolute
-
-let location_of_filepath ~base fp =
-  let file = FilePath.basename fp in
-  let dir = FilePath.dirname fp in
-  let folder = FilePath.dirname dir |> relative base in
-  let state =
-    match FilePath.basename dir with
-    | "cur" -> Cur
-    | "tmp" -> Tmp
-    | "new" -> New
-    | _ -> Printf.sprintf "Invalid FilePath: %s" fp |> failwith
-  in
-  { base; file; state; folder }
-
-let filepath_of_location { base; file; state; folder } =
-  let d = mds_to_string state in
-  FilePath.make_filename [ folder; d; file ]
-    |> absolute base
-
 let describe msg add del =
   let open Printf in
-  let minus loc = printf " - %s\n" loc.folder in
+  let minus s = printf " - %s\n" s in
   let plus s = printf " + %s\n" s in
   if not ( add = [] && del = [] )
   then
@@ -91,49 +44,46 @@ let describe msg add del =
   List.iter ~f:minus del ;
   List.iter ~f:plus add
 
-let copy src dst =
-  let dst = FilePath.make_filename [ src.base; dst; mds_to_string src.state ] in
-  let src = filepath_of_location src in
-  printf "cp %s %s\n" src dst
-  (* TODO: This can fail *)
-  (* FileUtil.cp src dst *)
-
-let rm src =
-  let src = filepath_of_location src in
-  printf "rm %s\n" src
-  (* TODO: This can fail *)
-  (* FileUtil.rm [filepath_of_location src] *)
-
-let mover ~move ~verbose ~srch_str db =
+let mover ~dry_run ~verbose ~srch_str ~debug db =
+  let module Cfg = struct
+    let verbose = verbose
+    let dry_run = dry_run
+    let base_dir = Database.get_path db
+  end
+  in
+  let module T = Tools.Make(Cfg) in
+  let open T in
   let open Set in
   let cfg_loc = "tools/move/cfg.scm" in
-  let to_location = location_of_filepath ~base:(Database.get_path db) in
   let rules = Rules.from_file cfg_loc in
   (* per message *)
   let work target msg =
     (* fold filenames of msg *)
     let init = (None, target, []) in
     let ff (_, to_add, to_delete) path =
-      let loc = to_location path in
-      let to_add = remove to_add loc.folder in
+      let mail = mail_of_filepath path in
+      let mail_dir = dir_of_mail mail in
+      let to_add = remove to_add mail_dir in
       let to_delete =
-        if not (mem target loc.folder)
-        then loc :: to_delete
+        if not (mem target mail_dir)
+        then mail :: to_delete
         else to_delete
       in
-      (Some loc, to_add, to_delete)
+      (Some mail, to_add, to_delete)
     in
-    let fp, to_add, to_delete = Message.fold_filenames ~f:ff ~init msg in
+    let mail_o, to_add, to_delete = Message.fold_filenames ~f:ff ~init msg in
     (* action *)
-    if verbose then describe msg (to_list to_add) to_delete ;
-    if move then begin
-      (* This might trigger where messages don't have any filename *)
-      let src = Option.value_exn fp in
-      (* first add .. *)
-      Set.iter ~f:(copy src) to_add ;
-      (* .. then remove filenames *)
-      List.iter ~f:rm to_delete
-    end
+    let () = if debug then
+      let add = to_list to_add in
+      let del = to_delete |> List.map ~f:dir_of_mail in
+      describe msg add del
+    in
+    (* This might trigger where messages don't have any filename *)
+    let mail = Option.value_exn mail_o in
+    (* first add .. *)
+    Set.iter ~f:(cp mail) to_add ;
+    (* .. then remove filenames *)
+    List.iter ~f:rm to_delete
   in
   (* fold messages and count rule failures *)
   let f acc msg =
@@ -163,8 +113,9 @@ let () =
   Command.basic
     ~summary:"Move messages in notmuch database according to tags"
     [%map_open
-      let move  = flag "move"  no_arg ~doc:"Move instead of dry run"
-      and quiet = flag "quiet" no_arg ~doc:"Don't print actions"
+      let move = flag "move"  no_arg ~doc:"Move instead of dry run"
+      and verbose = flag "verbose" no_arg ~doc:"Be verbose"
+      and debug = flag "debug" no_arg ~doc:"Print tag + actions per message"
       and srch_lst = anon (sequence ("search-term" %: string))
       in
       let srch_str =
@@ -172,6 +123,9 @@ let () =
         | [] -> "*"
         | l  -> String.concat ~sep:" " l
       in
-      let verbose = not quiet in
-      mover ~move ~verbose ~srch_str |> with_db
+      let dry_run = not move in
+      let () = if not (move || verbose || debug) then
+        printf "No action specified. Doing nothing...\n"
+      in
+      mover ~dry_run ~debug ~verbose ~srch_str |> with_db
     ] |> Command.run
