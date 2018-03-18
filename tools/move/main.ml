@@ -1,10 +1,6 @@
 open Core
 open Notmuch
 
-let default = []
-let tag s = [s]
-let tags l = l
-
 module Set = Set.Make(String)
 
 let tag_set_of_message msg =
