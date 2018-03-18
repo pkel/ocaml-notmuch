@@ -44,7 +44,7 @@ let describe msg add del =
   List.iter ~f:minus del ;
   List.iter ~f:plus add
 
-let mover ~dry_run ~verbose ~srch_str ~debug db =
+let mover ~dry_run ~verbose ~srch_str ~debug db rules =
   let module Cfg = struct
     let verbose = verbose
     let dry_run = dry_run
@@ -54,8 +54,6 @@ let mover ~dry_run ~verbose ~srch_str ~debug db =
   let module T = Tools.Make(Cfg) in
   let open T in
   let open Set in
-  let cfg_loc = "tools/move/cfg.scm" in
-  let rules = Rules.from_file cfg_loc in
   (* per message *)
   let work target msg =
     (* fold filenames of msg *)
@@ -98,15 +96,20 @@ let mover ~dry_run ~verbose ~srch_str ~debug db =
       "WARNING: Insufficient rules. Ignored %d unmatched messages.\n"
       nfails
 
-let with_db f =
+let with_db_and_rules f =
   let open Printf in
   let open Ext.Result in
   fun () -> Config.load ()
-  |> and_then ~f:(Config.get ~section:"database" ~key:"path")
-  |> and_then_opt ~err:"Failed to open database" ~f:Database.open_
+  |> and_then_pair ~fpair:(
+    ( fun cfg ->
+      Config.get ~section:"database" ~key:"path" cfg
+      |> and_then_opt ~err:"Failed to open database" ~f:Database.open_ )
+    , fun cfg ->
+      Config.get ~section:"ocaml" ~key:"move_config" cfg
+      |> map ~f:Rules.from_file )
   |> function
     | Error e -> eprintf "%s\n" e
-    | Ok db -> f db
+    | Ok (db, rules) -> f db rules
 
 let () =
   let open Command.Let_syntax in
@@ -114,7 +117,7 @@ let () =
     ~summary:"Move messages in notmuch database according to tags"
     [%map_open
       let move = flag "move"  no_arg ~doc:"Move instead of dry run"
-      and verbose = flag "verbose" no_arg ~doc:"Be verbose"
+      and verbose = flag "verbose" no_arg ~doc:"Print file actions"
       and debug = flag "debug" no_arg ~doc:"Print tag + actions per message"
       and srch_lst = anon (sequence ("search-term" %: string))
       in
@@ -127,5 +130,5 @@ let () =
       let () = if not (move || verbose || debug) then
         printf "No action specified. Doing nothing...\n"
       in
-      mover ~dry_run ~debug ~verbose ~srch_str |> with_db
+      mover ~dry_run ~debug ~verbose ~srch_str |> with_db_and_rules
     ] |> Command.run
