@@ -79,16 +79,22 @@ module Make(Cfg: Cfg) : M = struct
     make_filename [ dir; state_to_string state ; filename ]
       |> make_absolute
 
-  let make_maildir dir =
+  let mkdir path =
     if Cfg.verbose then
-      printf "mkdir %s\n" dir ;
-    let open FileUtil in
+      let rel = make_relative path in
+      printf "mkdir %s\n" rel
+    else () ;
+    if not Cfg.dry_run then
+      FileUtil.mkdir ~parent:true path
+    else ()
+
+  let make_maildir dir =
     [ Cur; Tmp; New ]
       |> List.map  ~f:state_to_string
       |> List.iter ~f:(fun x ->
           make_filename [dir; x] |>
           make_absolute |>
-          mkdir ~parent:true
+          mkdir
       )
 
   let assure_dir dir =
@@ -96,16 +102,19 @@ module Make(Cfg: Cfg) : M = struct
     let dir = make_absolute dir in
     if not (test (Is_dir) dir) then
       make_maildir dir
+    else ()
 
   let cp mail dst_dir =
     let () = check_dir dst_dir in
     let src = filepath_of_mail mail in
-    let dst = filepath_of_mail { mail with dir = dst_dir } |> dirname in
+    let dst = filepath_of_mail { mail with dir = dst_dir }
+      |> dirname
+    in
+    dirname dst |> assure_dir ;
     if Cfg.verbose then
       printf "cp %s %s\n" (make_relative src) (make_relative dst)
     else () ;
     if not Cfg.dry_run then begin
-      assure_dir dst ;
       FileUtil.cp [src] dst
     end
 
