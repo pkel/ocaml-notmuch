@@ -17,8 +17,10 @@ let syncer db store srch_lst =
     (id, tags) :: acc
   in
   let open Query in
-  String.concat " " srch_lst |> from_string |> Messages.fold ~init:[] db ~f
-  |> Store.update
+  String.concat " " srch_lst
+  |> from_string
+  |> Messages.fold ~init:[] db ~f
+  |> Store.set_tags
 
 let with_db_and_store f =
   let open Printf in
@@ -37,7 +39,7 @@ let with_db_and_store f =
 open Cmdliner
 
 let srch_lst =
-  let doc = "Overwrite the deafult search term" in
+  let doc = "Overwrite the default search term" in
   let env = Arg.env_var "NOTMUCH_SEARCH_TERM" ~doc in
   let doc = "Notmuch search term to filter operation on" in
   Arg.(value & pos_all string ["path:**"] & info [] ~env ~docv:"SEARCH_TERM" ~doc)
