@@ -23,6 +23,8 @@ module Make(Cfg:Cfg) : M = struct
     let author = Printf.sprintf "%s <%s>" Cfg.author.name Cfg.author.mail in
     info ~author fmt
 
+  let tags_info = info "Update tags"
+
   let key_of_id id key =
     (* let h = Hashtbl.hash id in *)
     (* let a = h land 1023 in *)
@@ -40,7 +42,7 @@ module Make(Cfg:Cfg) : M = struct
 
   let apply ~info f =
     let f_ = function
-      | None -> Lwt.return None
+      | None -> assert false
       | Some tree -> f tree >|= fun x -> Some x
     in
     let%lwt str = Store.master config in
@@ -48,11 +50,11 @@ module Make(Cfg:Cfg) : M = struct
 
   let set_mtags_assoc assoc =
     let f tree = Lwt_list.fold_left_s set_tags tree assoc in
-    apply ~info:(info "Update tags") f
+    apply ~info:tags_info f
 
   let set_mtags_stream s =
     let f tree = Lwt_stream.fold_s (fun el acc -> set_tags acc el) s tree in
-    apply ~info:(info "Update tags") f
+    apply ~info:tags_info f
 
   let get_tags id =
     let%lwt t = Store.master config in
