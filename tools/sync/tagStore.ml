@@ -1,5 +1,6 @@
 module type M = sig
-  val set_tags : (string * string list) list -> unit
+  val set_tags : (string * string list) list -> unit Lwt.t
+  val get_tags : string -> string list option Lwt.t
 end
 
 type author = { name : string; mail : string}
@@ -42,9 +43,13 @@ module Make(Cfg:Cfg) : M = struct
       Lwt_list.fold_left_s upd tree assoc >|= fun x -> Some x
 
   let set_tags assoc =
-    begin
-      let%lwt str = Store.master config in
-      Store.with_tree str [] ~info:(info "Update tags") (set_tags_ assoc)
-    end
-    |> Lwt_main.run
+    let%lwt str = Store.master config in
+    Store.with_tree str [] ~info:(info "Update tags") (set_tags_ assoc)
+
+  let get_tags id =
+    let%lwt t = Store.master config in
+    let key = key_of_id id "tags" in
+    Store.find t key >|= function
+      | None -> None
+      | Some s -> Some (tags_of_str s)
 end

@@ -21,6 +21,7 @@ let syncer db store srch_lst =
   |> from_string
   |> Messages.fold ~init:[] db ~f
   |> Store.set_tags
+  |> Lwt_main.run
 
 let with_db_and_store f =
   let open Printf in
