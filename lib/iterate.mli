@@ -5,6 +5,7 @@ module type M = sig
   val fold : ptr -> init:'acc -> f:('acc -> el -> 'acc) -> 'acc
   val map : ptr -> f:(el -> 'a) -> 'a list
   val iter : ptr -> f:(el -> unit) -> unit
+  val stream : ?finalize:(unit -> unit)  -> ptr -> el Lwt_stream.t
 end
 
 type key_value = string * string

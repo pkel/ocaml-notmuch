@@ -56,8 +56,8 @@ let add_tag q tag =
   (* TODO: get error from db and present *)
   | _ -> raise (Failure "Couldn't add tags")
 
-(* finalized queries should be executed and then destroyed *)
-let finalize db query =
+(* prepared queries should be executed and then destroyed *)
+let prepare db query =
   let q = C.query_create db query.query in
   C.query_set_omit_excluded q (exclude_to_int query.exclude) ;
   C.query_set_sort q (sort_to_int query.sort) ;
@@ -87,12 +87,13 @@ module type Exec = sig
   val fold   : db -> t -> init:'acc -> f:('acc -> tmp -> 'acc) -> 'acc
   val map    : db -> t -> f:(tmp -> 'a) -> 'a list
   val iter   : db -> t -> f:(tmp -> unit) -> unit
+  val stream : db -> t -> tmp Lwt_stream.t
 end
 
 module F (A : Result) : (Exec with type tmp := A.el) = struct
   let count db query =
     let cnt_ptr = allocate uint Unsigned.UInt.zero in
-    let q = finalize db query in
+    let q = prepare db query in
     let () = A.count q cnt_ptr |> Status.throw in
     let () = C.query_destroy q in
     Unsigned.UInt.to_int !@cnt_ptr
@@ -100,7 +101,7 @@ module F (A : Result) : (Exec with type tmp := A.el) = struct
   let search db query f =
     (* prepare query and execute *)
     let res_ptr = allocate A.i_t A.null in
-    let q = finalize db query in
+    let q = prepare db query in
     let () = A.search q res_ptr |> Status.throw in
     (* do stuff on search result *)
     let return = f !@res_ptr in
@@ -116,6 +117,14 @@ module F (A : Result) : (Exec with type tmp := A.el) = struct
 
   let iter db query ~f =
     A.I.iter ~f |> search db query
+
+  let stream db query =
+    (* we need another order here *)
+    let res_ptr = allocate A.i_t A.null in
+    let q = prepare db query in
+    let () = A.search q res_ptr |> Status.throw in
+    let finalize () = C.query_destroy q in
+    A.I.stream ~finalize !@res_ptr
 end
 
 (* Result: Messages *)

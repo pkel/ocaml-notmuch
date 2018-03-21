@@ -29,6 +29,7 @@ module type Exec = sig
   val fold   : db -> t -> init:'acc -> f:('acc -> tmp -> 'acc) -> 'acc
   val map    : db -> t -> f:(tmp -> 'a) -> 'a list
   val iter   : db -> t -> f:(tmp -> unit) -> unit
+  val stream : db -> t -> tmp Lwt_stream.t
 end
 
 module Messages : Exec with type tmp := C.message

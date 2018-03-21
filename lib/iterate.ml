@@ -5,6 +5,7 @@ module type M = sig
   val fold : ptr -> init:'acc -> f:('acc -> el -> 'acc) -> 'acc
   val map : ptr -> f:(el -> 'a) -> 'a list
   val iter : ptr -> f:(el -> unit) -> unit
+  val stream : ?finalize:(unit -> unit)  -> ptr -> el Lwt_stream.t
 end
 
 module type In = sig
@@ -44,6 +45,21 @@ module F (I : In) : (M with type ptr := I.ptr and type el := I.el) = struct
     let init = () in
     let f acc e = f e in
     fold ptr ~init ~f
+
+  let stream ?finalize ptr =
+    let f () =
+      if I.valid ptr then
+        let el = I.get ptr in
+        let () = I.move ptr in
+        Some el |> Lwt.return
+      else
+        let () = match finalize with
+        | None -> ()
+        | Some f -> f()
+        in
+        None |> Lwt.return
+    in
+    Lwt_stream.from f
 end
 
 module Mes : In
