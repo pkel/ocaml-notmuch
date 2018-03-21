@@ -6,7 +6,10 @@
 all:
 	jbuilder build @install
 
-.PHONY: clean all test
+.PHONY: clean all test install
+
+install:
+	jbuilder install
 
 # Build and run tests
 test:
