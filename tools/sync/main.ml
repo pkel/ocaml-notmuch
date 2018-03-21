@@ -11,16 +11,17 @@ let syncer db store srch_lst =
       }
     let location = store
   end) in
-  let f acc msg =
+  let f msg =
     let id = Message.get_id msg in
     let tags = Message.get_tags msg in
-    (id, tags) :: acc
+    (id, tags)
   in
   let open Query in
   String.concat " " srch_lst
   |> from_string
-  |> Messages.fold ~init:[] db ~f
-  |> Store.set_tags
+  |> Messages.stream db
+  |> Lwt_stream.map f
+  |> Store.set_mtags_stream
   |> Lwt_main.run
 
 let with_db_and_store f =

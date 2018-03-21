@@ -1,5 +1,6 @@
 module type M = sig
-  val set_tags : (string * string list) list -> unit Lwt.t
+  val set_mtags_assoc : (string * string list) list -> unit Lwt.t
+  val set_mtags_stream : (string * string list) Lwt_stream.t -> unit Lwt.t
   val get_tags : string -> string list option Lwt.t
 end
 
@@ -34,17 +35,24 @@ module Make(Cfg:Cfg) : M = struct
   let tags_of_str = String.split_on_char '\n'
   let str_of_tags = String.concat "\n"
 
-  let set_tags_ assoc = function
-    | None -> Lwt.return None
-    | Some tree ->
-      let upd acc (id,tags) =
-        str_of_tags tags |> set_msg_kv acc id "tags"
-      in
-      Lwt_list.fold_left_s upd tree assoc >|= fun x -> Some x
+  let set_tags t (id, tags) =
+    str_of_tags tags |> set_msg_kv t id "tags"
 
-  let set_tags assoc =
+  let apply ~info f =
+    let f_ = function
+      | None -> Lwt.return None
+      | Some tree -> f tree >|= fun x -> Some x
+    in
     let%lwt str = Store.master config in
-    Store.with_tree str [] ~info:(info "Update tags") (set_tags_ assoc)
+    Store.with_tree str [] ~info f_
+
+  let set_mtags_assoc assoc =
+    let f tree = Lwt_list.fold_left_s set_tags tree assoc in
+    apply ~info:(info "Update tags") f
+
+  let set_mtags_stream s =
+    let f tree = Lwt_stream.fold_s (fun el acc -> set_tags acc el) s tree in
+    apply ~info:(info "Update tags") f
 
   let get_tags id =
     let%lwt t = Store.master config in
