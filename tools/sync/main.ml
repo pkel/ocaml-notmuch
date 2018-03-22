@@ -1,6 +1,6 @@
 open Notmuch
 
-let syncer db store srch_lst =
+let syncer ~db ~store ~remote srch_lst =
   let user = Unix.getlogin () in
   let host = Unix.gethostname () in
   let module Store = TagStore.Make(struct
@@ -28,15 +28,19 @@ let with_db_and_store f =
   let open Printf in
   let open Ext.Result in
   fun x -> Config.load ()
-  |> and_then_pair ~fpair:(
-    ( fun cfg ->
+  |> and_then_pair ~fpair:
+    ( ( fun cfg ->
       Config.get ~section:"database" ~key:"path" cfg
       |> and_then_opt ~err:"Failed to open database" ~f:Database.open_ )
-    , fun cfg ->
-      Config.get ~section:"ocaml" ~key:"sync_store" cfg )
+    , ( fun cfg ->
+      ["sync_store_local"; "sync_store_remote"]
+      |> List.map (fun key -> Config.get ~section:"ocaml" ~key cfg)
+      |> all )
+    )
   |> function
     | Error e -> eprintf "%s\n" e
-    | Ok (db, store) -> f db store x
+    | Ok (db , [store; remote]) -> f ~db ~store ~remote x
+    | Ok _ -> assert false
 
 open Cmdliner
 
