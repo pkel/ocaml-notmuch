@@ -22,6 +22,7 @@ let syncer ~db ~store ~remote srch_lst =
   |> Messages.stream db
   |> Lwt_stream.map f
   |> Store.set_mtags_stream
+  |> Store.push remote
   |> Lwt_main.run
 
 let with_db_and_store f =

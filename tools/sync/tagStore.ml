@@ -1,4 +1,5 @@
 module type M = sig
+  val push : string -> unit Lwt.t -> unit Lwt.t
   val set_mtags_assoc : (string * string list) list -> unit Lwt.t
   val set_mtags_stream : (string * string list) Lwt_stream.t -> unit Lwt.t
   val get_tags : string -> string list option Lwt.t
@@ -62,4 +63,9 @@ module Make(Cfg:Cfg) : M = struct
     Store.find t key >|= function
       | None -> None
       | Some s -> Some (tags_of_str s)
+
+  let push remote unit_ =
+    unit_ >>= fun () ->
+      let r = Irmin__Sync_ext.remote_uri remote in
+      Lwt.return ()
 end
