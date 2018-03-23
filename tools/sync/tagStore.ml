@@ -16,6 +16,7 @@ module Make(Cfg:Cfg) : M = struct
 	open Irmin_unix
 
 	module Store = Irmin_unix.Git.FS.KV (Irmin.Contents.String)
+  module Sync = Irmin.Sync(Store)
 
 	let%lwt config =
     Irmin_git.config ~bare:false Cfg.location |> Store.Repo.v
@@ -27,6 +28,7 @@ module Make(Cfg:Cfg) : M = struct
   let tags_info = info "Update tags"
 
   let key_of_id id key =
+    let id = B64.encode id in
     (* let h = Hashtbl.hash id in *)
     (* let a = h land 1023 in *)
     (* let sa = Printf.sprintf "%04d" a in *)
@@ -43,7 +45,8 @@ module Make(Cfg:Cfg) : M = struct
 
   let apply ~info f =
     let f_ = function
-      | None -> assert false
+      (* None happens on nonexistent git repo, a second run gives success *)
+      | None -> Lwt.return None
       | Some tree -> f tree >|= fun x -> Some x
     in
     let%lwt str = Store.master config in
@@ -66,6 +69,7 @@ module Make(Cfg:Cfg) : M = struct
 
   let push remote unit_ =
     unit_ >>= fun () ->
-      let r = Irmin__Sync_ext.remote_uri remote in
-      Lwt.return ()
+      let%lwt t = Store.master config in
+      let upstream = Irmin.remote_uri remote in
+      Sync.push_exn t upstream
 end
