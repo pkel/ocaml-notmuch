@@ -1,29 +1,45 @@
 open Notmuch
+open Lwt.Infix
 
 let syncer ~db ~store ~remote srch_lst =
   let user = Unix.getlogin () in
   let host = Unix.gethostname () in
-  let module Store = TagStore.Make(struct
+  let module Config = struct
     open TagStore
     let author =
       { name = "notmuch-sync"
       ; mail = user ^ "@" ^ host
       }
     let location = store
-  end) in
-  let f msg =
-    let id = Message.get_id msg in
-    let tags = Message.get_tags msg in
-    (id, tags)
+  end in
+  let module Store = TagStore.Make(Config) in
+  let main =
+    (* Pull remote git, merge changes *)
+    Store.pull remote
+    >>= function
+      | Ok () -> Lwt.return ()
+      | Error e -> Lwt_io.printf "Failed to pull: %s\n" e
+    (* Update local git with tags *)
+    >>= fun () ->
+      let f msg =
+        let id = Message.get_id msg in
+        let tags = Message.get_tags msg in
+        (id, tags)
+      in
+      let open Query in
+      String.concat " " srch_lst
+      |> from_string
+      |> Messages.stream db
+      |> Lwt_stream.map f
+      |> Store.set_mtags_stream
+    (* Push stuff to remote *)
+    >>= fun () ->
+      Store.push remote
+    >>= function
+      | Ok () -> Lwt.return ()
+      | Error e -> Lwt_io.printf "Failed to push: %s\n" e
   in
-  let open Query in
-  String.concat " " srch_lst
-  |> from_string
-  |> Messages.stream db
-  |> Lwt_stream.map f
-  |> Store.set_mtags_stream
-  (* |> Store.push remote *)
-  |> Lwt_main.run
+  Lwt_main.run main
 
 let with_db_and_store f =
   let open Printf in

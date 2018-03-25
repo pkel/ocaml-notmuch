@@ -1,8 +1,13 @@
 module type M = sig
-  val push : string -> unit Lwt.t -> unit Lwt.t
-  val set_mtags_assoc : (string * string list) list -> unit Lwt.t
-  val set_mtags_stream : (string * string list) Lwt_stream.t -> unit Lwt.t
-  val get_tags : string -> string list option Lwt.t
+  type tag = string
+  type id = string
+  type remote = string
+
+  val push : remote -> (unit, string) result Lwt.t
+  val pull : remote -> (unit, string) result Lwt.t
+  val set_mtags_assoc  : (id * tag list) list -> unit Lwt.t
+  val set_mtags_stream : (id * tag list) Lwt_stream.t -> unit Lwt.t
+  val get_tags : id -> string list option Lwt.t
 end
 
 type author = { name : string; mail : string}
@@ -14,6 +19,10 @@ end
 module Make(Cfg:Cfg) : M = struct
   open Lwt.Infix
 	open Irmin_unix
+
+  type tag = string
+  type id = string
+  type remote = string
 
 	module Store = Irmin_unix.Git.FS.KV (Irmin.Contents.String)
   module Sync = Irmin.Sync(Store)
@@ -49,8 +58,8 @@ module Make(Cfg:Cfg) : M = struct
       | None -> Lwt.return None
       | Some tree -> f tree >|= fun x -> Some x
     in
-    let%lwt str = Store.master config in
-    Store.with_tree str [] ~info f_
+    Store.master config >>= fun t ->
+    Store.with_tree t [] ~info f_
 
   let set_mtags_assoc assoc =
     let f tree = Lwt_list.fold_left_s set_tags tree assoc in
@@ -61,15 +70,32 @@ module Make(Cfg:Cfg) : M = struct
     apply ~info:tags_info f
 
   let get_tags id =
-    let%lwt t = Store.master config in
     let key = key_of_id id "tags" in
-    Store.find t key >|= function
-      | None -> None
-      | Some s -> Some (tags_of_str s)
+    Store.master config >>= fun t ->
+    Store.find t key >|=
+      function
+        | None -> None
+        | Some s -> Some (tags_of_str s)
 
-  let push remote unit_ =
-    unit_ >>= fun () ->
-      let%lwt t = Store.master config in
-      let upstream = Irmin.remote_uri remote in
-      Sync.push_exn t upstream
+  let pull remote =
+    let upstream = Irmin.remote_uri remote in
+    let handlerr = function
+      | `Conflict s
+      | `Msg s -> Error s
+      | `No_head -> Error "No head"
+      | `Not_available -> Error "Not available"
+    in
+    Store.master config
+    >>= fun t ->
+      Sync.pull t upstream `Set
+    >|= function
+     | Ok () -> Ok ()
+     | Error e -> handlerr e
+
+  let push remote =
+    let cmd = ("", [|"git"; "-C"; Cfg.location ;"push"; remote; "master"|]) in
+    Lwt_process.exec cmd
+    >|= function
+      | WEXITED 0 -> Ok ()
+      | _ -> Error "external command returned non-zero"
 end
