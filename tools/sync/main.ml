@@ -16,9 +16,10 @@ let syncer ~db ~store ~remote srch_lst =
   let main =
     (* Pull remote git, merge changes *)
     Store.pull remote
-    >>= function
+    >>= begin function
       | Ok () -> Lwt.return ()
       | Error e -> Lwt_io.printf "Failed to pull: %s\n" e
+    end
     (* Update local git with tags *)
     >>= fun () ->
       let f msg =
@@ -35,9 +36,10 @@ let syncer ~db ~store ~remote srch_lst =
     (* Push stuff to remote *)
     >>= fun () ->
       Store.push remote
-    >>= function
+    >>= begin function
       | Ok () -> Lwt.return ()
       | Error e -> Lwt_io.printf "Failed to push: %s\n" e
+    end
   in
   Lwt_main.run main
 
