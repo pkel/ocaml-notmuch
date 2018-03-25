@@ -24,7 +24,16 @@ module Make(Cfg:Cfg) : M = struct
   type id = string
   type remote = string
 
-	module Store = Irmin_unix.Git.FS.KV (Irmin.Contents.String)
+  module Entry = struct
+    module S = Irmin.Contents.String
+    type t = S.t
+    let t = S.t
+    let pp = S.pp
+    let of_string = S.of_string
+    let merge = S.merge
+  end
+
+	module Store = Irmin_unix.Git.FS.KV (Entry)
   module Sync = Irmin.Sync(Store)
 
 	let%lwt config =
