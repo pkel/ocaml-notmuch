@@ -17,29 +17,54 @@ module type Cfg = sig
 end
 
 module Make(Cfg:Cfg) : M = struct
+  open Sexplib.Std
   open Lwt.Infix
-	open Irmin_unix
+  open Irmin
+  open Irmin_unix
 
   type tag = string
   type id = string
   type remote = string
 
+  module StringSet = Set.Make(String)
+
   module Entry = struct
-    module S = Irmin.Contents.String
-    type t = S.t
-    let t = S.t
-    let pp = S.pp
-    let of_string = S.of_string
-    let merge = S.merge
+    type t = tag list
+    let t = Type.(list string)
+    let pp = Fmt.(list string)
+    let of_string s = Ok (String.split_on_char '\n' s)
+
+    let threeway ~old a b =
+      let open StringSet in
+      let old = of_list old in
+      let a   = of_list a in
+      let b   = of_list b in
+      let adda = diff a old in
+      let addb = diff b old in
+      let rema = diff old a in
+      let remb = diff old b in
+      let add = union adda addb in
+      let rem = union rema remb in
+      diff old rem |> union add |> fun set ->
+        fold (fun el acc -> el::acc) set []
+
+    let mergef ~old a b =
+      Lwt_io.printf "merge\n" >>= old >|= function
+      | Error e -> Error e
+      | Ok None -> Ok (threeway ~old:[] a b)
+      | Ok (Some l) -> Ok (threeway ~old:l a b)
+
+    let merge = Merge.(v t mergef |> option)
+
   end
 
-	module Store = Irmin_unix.Git.FS.KV (Entry)
+  module Store = Irmin_unix.Git.FS.KV(Entry)
   module Sync = Irmin.Sync(Store)
 
-	let%lwt config =
+  let%lwt config =
     Irmin_git.config ~bare:false Cfg.location |> Store.Repo.v
 
-	let info fmt =
+  let info fmt =
     let author = Printf.sprintf "%s <%s>" Cfg.author.name Cfg.author.mail in
     info ~author fmt
 
@@ -55,11 +80,8 @@ module Make(Cfg:Cfg) : M = struct
   let set_msg_kv tree id key value =
     Store.Tree.add tree (key_of_id id "tags") value
 
-  let tags_of_str = String.split_on_char '\n'
-  let str_of_tags = String.concat "\n"
-
   let set_tags t (id, tags) =
-    str_of_tags tags |> set_msg_kv t id "tags"
+    set_msg_kv t id "tags" tags
 
   let apply ~info f =
     let f_ = function
@@ -81,10 +103,7 @@ module Make(Cfg:Cfg) : M = struct
   let get_tags id =
     let key = key_of_id id "tags" in
     Store.master config >>= fun t ->
-    Store.find t key >|=
-      function
-        | None -> None
-        | Some s -> Some (tags_of_str s)
+    Store.find t key
 
   let pull remote =
     let upstream = Irmin.remote_uri remote in
@@ -96,7 +115,7 @@ module Make(Cfg:Cfg) : M = struct
     in
     Store.master config
     >>= fun t ->
-      Sync.pull t upstream `Set
+      Sync.pull t upstream (`Merge (info "Merge remote"))
     >|= function
      | Ok () -> Ok ()
      | Error e -> handlerr e

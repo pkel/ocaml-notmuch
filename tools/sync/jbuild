@@ -3,5 +3,5 @@
 (executable
  ((name main)
   (public_name notmuch-syncer)
-  (preprocess (pps (lwt_ppx ppx_driver.runner)))
+  (preprocess (pps (lwt_ppx)))
   (libraries (notmuch irmin-unix cmdliner lwt))))
