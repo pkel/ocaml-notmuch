@@ -31,7 +31,7 @@ module Make(Cfg:Cfg) : M = struct
   module Entry = struct
     type t = tag list
     let t = Type.(list string)
-    let pp = Fmt.(list string)
+    let pp = Fmt.(list ~sep:Format.pp_force_newline string)
     let of_string s = Ok (String.split_on_char '\n' s)
 
     let threeway ~old a b =
@@ -71,11 +71,12 @@ module Make(Cfg:Cfg) : M = struct
   let tags_info = info "Update tags"
 
   let key_of_id id key =
-    let id = B64.encode id in
+    let b64 = B64.encode id in
+    let pre = String.sub b64 0 2 in
     (* let h = Hashtbl.hash id in *)
     (* let a = h land 1023 in *)
     (* let sa = Printf.sprintf "%04d" a in *)
-    (* sa :: *) "msg_by_id" :: id :: [key]
+    (* sa :: *) "b64_id" :: pre :: b64 :: [key]
 
   let set_msg_kv tree id key value =
     Store.Tree.add tree (key_of_id id "tags") value
