@@ -69,6 +69,14 @@ let srch_lst =
   let doc = "Notmuch search term to filter operation on" in
   Arg.(value & pos_all string ["path:**"] & info [] ~env ~docv:"SEARCH_TERM" ~doc)
 
-let main_t = Term.(const (with_db_and_store syncer) $ srch_lst)
+open Term
 
-let () = Term.exit @@ Term.eval (main_t, Term.info "notmuch-sync")
+let main_t = const (with_db_and_store syncer) $ srch_lst
+
+let () = exit @@
+  eval_choice (main_t, info "onm" ~doc:"Ocaml tools for notmuch databases") [
+    main_t, info "main" ~doc:"pull, write, push";
+    main_t, info "read" ~doc:"update notmuch database from local store";
+    main_t, info "write" ~doc:"update local store from notmuch database";
+    main_t, info "pull" ~doc:"pull updates from remote store(s)";
+    main_t, info "push" ~doc:"push updates to remote store(s)"]
