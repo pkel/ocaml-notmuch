@@ -107,24 +107,40 @@ let with_db_and_rules f =
     | Error e -> eprintf "%s\n" e
     | Ok (db, rules) -> f db rules
 
-let () =
-  let open Command.Let_syntax in
-  Command.basic
-    ~summary:"Move messages in notmuch database according to tags"
-    [%map_open
-      let move = flag "move"  no_arg ~doc:"Move instead of dry run"
-      and verbose = flag "verbose" no_arg ~doc:"Print file actions"
-      and debug = flag "debug" no_arg ~doc:"Print tag + actions per message"
-      and srch_lst = anon (sequence ("search-term" %: string))
-      in
-      let srch_str =
-        match srch_lst with
-        | [] -> "*"
-        | l  -> String.concat ~sep:" " l
-      in
-      let dry_run = not move in
-      let () = if not (move || verbose || debug) then
-        printf "No action specified. Doing nothing...\n"
-      in
-      mover ~dry_run ~debug ~verbose ~srch_str |> with_db_and_rules
-    ] |> Command.run
+open Cmdliner
+
+let move =
+  let doc = "Actually move messages" in
+  Arg.(value & flag & info ["m"; "move"] ~doc)
+
+let verbose =
+  let doc = "Print actions" in
+  Arg.(value & flag & info ["v"; "verbose"] ~doc)
+
+let debug =
+  let doc = "Print differences in tags" in
+  Arg.(value & flag & info ["d"; "debug"] ~doc)
+
+let srch_lst =
+  let doc = "Notmuch search term to filter operation on" in
+  let env = Arg.env_var "NOTMUCH_SEARCH_TERM" ~doc in
+  Arg.(value & pos_all string ["path:**"] & info [] ~env ~docv:"SEARCH_TERM" ~doc)
+
+open Term
+
+let wrapper move verbose debug srch_lst =
+  let srch_str =
+    match srch_lst with
+    | [] -> "*"
+    | l  -> String.concat ~sep:" " l
+  in
+  let dry_run = not move in
+  let () = if not (move || verbose || debug) then
+    printf "No action specified. Doing nothing.\n"
+  in
+  mover ~dry_run ~debug ~verbose ~srch_str |> with_db_and_rules
+
+let main_cmd =
+  let doc = "Move messages in notmuch database according to tags" in
+  const wrapper $ move $ verbose $ debug $ srch_lst,
+  info "move" ~doc

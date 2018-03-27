@@ -3,5 +3,6 @@
 (executable
  ((name main)
   (public_name onm)
+  (package onm)
   (preprocess (pps (lwt_ppx)))
-  (libraries (notmuch irmin-unix cmdliner lwt))))
+  (libraries (cmdliner sync move))))

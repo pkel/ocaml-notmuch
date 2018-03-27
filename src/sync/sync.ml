@@ -46,7 +46,7 @@ let syncer ~db ~store ~remote srch_lst =
 let with_db_and_store f =
   let open Printf in
   let open Ext.Result in
-  fun x -> Config.load ()
+  fun x () -> Config.load ()
   |> and_then_pair ~fpair:
     ( ( fun cfg ->
       Config.get ~section:"database" ~key:"path" cfg
@@ -71,12 +71,11 @@ let srch_lst =
 
 open Term
 
-let main_t = const (with_db_and_store syncer) $ srch_lst
+let wrapper srch_lst =
+  (with_db_and_store syncer) srch_lst
 
-let () = exit @@
-  eval_choice (main_t, info "onm" ~doc:"Ocaml tools for notmuch databases") [
-    main_t, info "main" ~doc:"pull, write, push";
-    main_t, info "read" ~doc:"update notmuch database from local store";
-    main_t, info "write" ~doc:"update local store from notmuch database";
-    main_t, info "pull" ~doc:"pull updates from remote store(s)";
-    main_t, info "push" ~doc:"push updates to remote store(s)"]
+let main_cmd =
+  let doc = "Sync tags via irmin" in
+  const wrapper $ srch_lst,
+  info "sync" ~doc
+
