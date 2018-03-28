@@ -1,7 +1,7 @@
 open Notmuch
 open Lwt.Infix
 
-let syncer ~db ~store ~remote srch_lst =
+let syncer ~db ~store ~remote ~srch_lst =
   let user = Unix.getlogin () in
   let host = Unix.gethostname () in
   let module Config = struct
@@ -43,10 +43,10 @@ let syncer ~db ~store ~remote srch_lst =
   in
   Lwt_main.run main
 
-let with_db_and_store f =
+let with_config f =
   let open Printf in
   let open Ext.Result in
-  fun x () -> Config.load ()
+  Config.load ()
   |> and_then_pair ~fpair:
     ( ( fun cfg ->
       Config.get ~section:"database" ~key:"path" cfg
@@ -58,7 +58,7 @@ let with_db_and_store f =
     )
   |> function
     | Error e -> eprintf "%s\n" e
-    | Ok (db , [store; remote]) -> f ~db ~store ~remote x
+    | Ok (db , [store; remote]) -> f ~db ~store ~remote
     | Ok _ -> assert false
 
 open Cmdliner
@@ -72,7 +72,7 @@ let srch_lst =
 open Term
 
 let wrapper srch_lst =
-  (with_db_and_store syncer) srch_lst
+  syncer ~srch_lst |> with_config
 
 let main_cmd =
   let doc = "Sync tags via irmin" in

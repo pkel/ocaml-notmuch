@@ -40,7 +40,7 @@ let describe msg add del =
   List.iter ~f:minus del ;
   List.iter ~f:plus add
 
-let mover ~dry_run ~verbose ~srch_str ~debug db rules =
+let mover ~dry_run ~verbose ~srch_str ~debug ~db ~rules =
   let module Cfg = struct
     let verbose = verbose
     let dry_run = dry_run
@@ -92,10 +92,10 @@ let mover ~dry_run ~verbose ~srch_str ~debug db rules =
       "WARNING: Insufficient rules. Ignored %d unmatched messages.\n"
       nfails
 
-let with_db_and_rules f =
+let with_config f =
   let open Printf in
   let open Ext.Result in
-  fun () -> Config.load ()
+  Config.load ()
   |> and_then_pair ~fpair:(
     ( fun cfg ->
       Config.get ~section:"database" ~key:"path" cfg
@@ -105,7 +105,7 @@ let with_db_and_rules f =
       |> map ~f:Rules.from_file )
   |> function
     | Error e -> eprintf "%s\n" e
-    | Ok (db, rules) -> f db rules
+    | Ok (db, rules) -> f ~db ~rules
 
 open Cmdliner
 
@@ -138,7 +138,7 @@ let wrapper move verbose debug srch_lst =
   let () = if not (move || verbose || debug) then
     printf "No action specified. Doing nothing.\n"
   in
-  mover ~dry_run ~debug ~verbose ~srch_str |> with_db_and_rules
+  mover ~dry_run ~debug ~verbose ~srch_str |> with_config
 
 let main_cmd =
   let doc = "Move messages in notmuch database according to tags" in
