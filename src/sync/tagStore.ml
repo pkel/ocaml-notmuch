@@ -89,11 +89,15 @@ module Make(Cfg:Cfg) : M = struct
   let set_tags t (id, tags) =
     set_msg_kv t id "tags" tags
 
+  (* apply a tree transformation f to master using commit msg info *)
   let apply ~info f =
-    let f_ = function
-      (* None happens on nonexistent git repo, a second run gives success *)
-      | None -> Lwt.return None
-      | Some tree -> f tree >|= fun x -> Some x
+    let f_ treeopt =
+      let tree = match treeopt with
+        (* None happens on nonexistent git repo *)
+        | None -> Store.Tree.empty
+        | Some tree -> tree
+      in
+      f tree >|= fun x -> Some x
     in
     Store.master repo >>= fun t ->
     Store.with_tree t [] ~info f_
