@@ -78,7 +78,7 @@ let read srch_lst =
   in
   Lwt_main.run lwt
 
-let pull () =
+let pull () : unit =
   let module C = ConfigFail in
   let cfg = C.load () in
   let local  = C.get ~section:"ocaml" ~key:"sync_store_local"  cfg in
@@ -86,7 +86,17 @@ let pull () =
   let module Store =
     TagStore.Make(StoreConfig(struct let location = local end))
     in
-  Store.pull remote |> Lwt_main.run |> fail ~code:5
+  let lwt =
+    let per_change (key, taglst) =
+      let tags = List.map (fun s -> "+" ^ s) taglst |> String.concat " " in
+      Lwt_io.printf "%s -- %s\n" tags key
+    in
+    Store.pull remote >>= function
+      | Error e -> Error e |> Lwt.return
+      | Ok lst  -> Lwt_list.iter_s per_change lst >|=
+        fun () -> Ok ()
+  in
+  Lwt_main.run lwt |> fail ~code:5
 
 let push () =
   let module C = ConfigFail in

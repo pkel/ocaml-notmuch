@@ -2,9 +2,10 @@ module type M = sig
   type tag = string
   type id = string
   type remote = string
+  type updates = (id * tag list) list
 
   val push : remote -> (unit, string) result Lwt.t
-  val pull : remote -> (unit, string) result Lwt.t
+  val pull : remote -> (updates, string) result Lwt.t
   val set_mtags_assoc  : (id * tag list) list -> unit Lwt.t
   val set_mtags_stream : (id * tag list) Lwt_stream.t -> unit Lwt.t
   val get_tags : id -> string list option Lwt.t
@@ -25,6 +26,7 @@ module Make(Cfg:Cfg) : M = struct
   type tag = string
   type id = string
   type remote = string
+  type updates = (id * tag list) list
 
   module StringSet = Set.Make(String)
 
@@ -75,13 +77,27 @@ module Make(Cfg:Cfg) : M = struct
 
   let tags_info = info "Update tags"
 
+  let key_prefix = "b64_id"
+
   let key_of_id id key =
     let b64 = B64.encode id in
     let pre = String.sub b64 0 2 in
-    (* let h = Hashtbl.hash id in *)
-    (* let a = h land 1023 in *)
-    (* let sa = Printf.sprintf "%04d" a in *)
-    (* sa :: *) "b64_id" :: pre :: b64 :: [key]
+    key_prefix :: pre :: b64 :: [key]
+
+  let get_tag_tree str = Store.get_tree str [key_prefix]
+
+  let diff_tag_trees old fresh : 'a list Lwt.t =
+    let fmap = function
+      | [_; b64; "tags"] , `Updated (_, (tags, _))
+      | [_; b64; "tags"] , `Added (tags, _)
+        -> Some (B64.decode b64, tags) |> Lwt.return
+      (* ignore removes and other keys *)
+      | _ -> Lwt.return None
+    in
+    let%lwt old = old
+    and fresh = fresh in
+    Store.Tree.diff old fresh
+      >>= Lwt_list.filter_map_p fmap
 
   let set_msg_kv tree id key value =
     Store.Tree.add tree (key_of_id id "tags") value
@@ -116,6 +132,7 @@ module Make(Cfg:Cfg) : M = struct
     Store.find t key
 
   let pull remote =
+    let before = Store.master repo >>= get_tag_tree in
     let upstream = Irmin.remote_uri remote in
     let handlerr = function
       | `Conflict s
@@ -123,12 +140,13 @@ module Make(Cfg:Cfg) : M = struct
       | `No_head -> Error "No head"
       | `Not_available -> Error "Not available"
     in
-    Store.master repo
-    >>= fun t ->
-      Sync.pull t upstream (`Merge (info "Merge remote"))
-    >|= function
-     | Ok () -> Ok ()
-     | Error e -> handlerr e
+    Store.master repo >>= fun mstr ->
+      Sync.pull mstr upstream (`Merge (info "Merge remote"))
+    >>= function
+     | Error e -> handlerr e |> Lwt.return
+     | Ok () ->
+         let after = Store.master repo >>= get_tag_tree in
+         diff_tag_trees before after >|= fun x -> Ok x
 
   let push remote =
     let cmd = ("", [|"git"; "-C"; Cfg.location ;"push"; remote; "master"|]) in
