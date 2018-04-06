@@ -53,6 +53,12 @@ val database_get_path : database -> string
 val database_add_message : database -> string -> messages ptr -> status
 val database_remove_message : database -> string -> status
 
+(** Find messages *)
+val database_find_message :
+  database -> string -> message ptr -> status
+val database_find_message_by_filename :
+  database -> string -> message ptr -> status
+
 (** Querying *)
 val query_create : database -> string -> query
 val query_get_query_string : query -> string

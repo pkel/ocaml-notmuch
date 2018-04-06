@@ -68,6 +68,14 @@ let database_remove_message =
   foreign "notmuch_database_remove_message"
     (database_t @-> string @-> returning status_t)
 
+let database_find_message =
+  foreign "notmuch_database_find_message"
+    (database_t @-> string @-> ptr message_t @-> returning status_t)
+
+let database_find_message_by_filename =
+  foreign "notmuch_database_find_message_by_filename"
+    (database_t @-> string @-> ptr message_t @-> returning status_t)
+
 let query_create =
   foreign "notmuch_query_create"
     (database_t @-> string @-> returning query_t)
