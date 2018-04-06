@@ -7,5 +7,5 @@ let default_cmd =
   info "onm" ~version:"v0.1.0" ~doc
 
 let () = exit @@
-  eval_choice default_cmd [Move.main_cmd; Sync.write_cmd; Sync.pull_cmd;
-  Sync.push_cmd]
+  eval_choice default_cmd [Move.main_cmd; Sync.write_cmd; Sync.read_cmd;
+  Sync.pull_cmd; Sync.push_cmd]

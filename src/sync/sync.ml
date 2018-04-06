@@ -52,7 +52,31 @@ let write srch_lst =
   in
   Lwt_main.run lwt
 
-let read = write
+let read srch_lst =
+  let module C = ConfigFail in
+  let cfg = C.load () in
+  let db = C.get ~section:"database" ~key:"path" cfg
+    |> Database.open_ ~write:true
+    |> fail_opt ~err:"Failed to open database" ~code:123
+  in
+  let local  = C.get ~section:"ocaml" ~key:"sync_store_local"  cfg in
+  let module Store =
+    TagStore.Make(StoreConfig(struct let location = local end))
+    in
+  let lwt =
+    let f msg =
+      let id = Message.get_id msg in
+      Lwt_main.run (Store.get_tags id) |> function
+        | None -> ()
+        | Some lst -> Message.set_tags msg lst
+    in
+    let open Query in
+    String.concat " " srch_lst
+    |> from_string
+    |> Messages.stream db
+    |> Lwt_stream.iter f
+  in
+  Lwt_main.run lwt
 
 let pull () =
   let module C = ConfigFail in

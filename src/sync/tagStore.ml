@@ -31,7 +31,12 @@ module Make(Cfg:Cfg) : M = struct
   module Entry = struct
     type t = tag list
     let t = Type.(list string)
-    let pp = Fmt.(list ~sep:Format.pp_force_newline string)
+
+    let pp fmt lst =
+      (* make tag files consistent by ordereing the tags *)
+      List.sort String.compare lst |>
+      Fmt.(list ~sep:Format.pp_force_newline string) fmt
+
     let of_string s = Ok (String.split_on_char '\n' s)
 
     let threeway ~old a b =
@@ -49,7 +54,7 @@ module Make(Cfg:Cfg) : M = struct
         fold (fun el acc -> el::acc) set []
 
     let mergef ~old a b =
-      Lwt_io.printf "merge\n" >>= old >|= function
+      old () >|= function
       | Error e -> Error e
       | Ok None -> Ok (threeway ~old:[] a b)
       | Ok (Some l) -> Ok (threeway ~old:l a b)
