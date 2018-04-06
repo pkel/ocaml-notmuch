@@ -66,7 +66,7 @@ module Make(Cfg:Cfg) : M = struct
   module Store = Irmin_unix.Git.FS.KV(Entry)
   module Sync = Irmin.Sync(Store)
 
-  let%lwt config =
+  let%lwt repo =
     Irmin_git.config ~bare:false Cfg.location |> Store.Repo.v
 
   let info fmt =
@@ -95,7 +95,7 @@ module Make(Cfg:Cfg) : M = struct
       | None -> Lwt.return None
       | Some tree -> f tree >|= fun x -> Some x
     in
-    Store.master config >>= fun t ->
+    Store.master repo >>= fun t ->
     Store.with_tree t [] ~info f_
 
   let set_mtags_assoc assoc =
@@ -108,7 +108,7 @@ module Make(Cfg:Cfg) : M = struct
 
   let get_tags id =
     let key = key_of_id id "tags" in
-    Store.master config >>= fun t ->
+    Store.master repo >>= fun t ->
     Store.find t key
 
   let pull remote =
@@ -119,7 +119,7 @@ module Make(Cfg:Cfg) : M = struct
       | `No_head -> Error "No head"
       | `Not_available -> Error "Not available"
     in
-    Store.master config
+    Store.master repo
     >>= fun t ->
       Sync.pull t upstream (`Merge (info "Merge remote"))
     >|= function
