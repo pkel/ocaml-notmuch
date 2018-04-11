@@ -89,12 +89,15 @@ let pull () : unit =
   let lwt =
     let per_change (key, taglst) =
       let tags = List.map (fun s -> "+" ^ s) taglst |> String.concat " " in
-      Lwt_io.printf "%s -- %s\n" tags key
+      Lwt_io.printf "%s -- id:\"%s\"\n" tags key
     in
     Store.pull remote >>= function
       | Error e -> Error e |> Lwt.return
-      | Ok lst  -> Lwt_list.iter_s per_change lst >|=
-        fun () -> Ok ()
+      | Ok [] -> Lwt.return (Ok ())
+      | Ok lst  ->
+          Lwt_io.printf "#notmuch-dump batch-tag:3 tags\n" >>= fun () ->
+            Lwt_list.iter_s per_change lst >|= fun () ->
+              Ok ()
   in
   Lwt_main.run lwt |> fail ~code:5
 
