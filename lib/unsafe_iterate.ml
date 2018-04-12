@@ -1,3 +1,5 @@
+module C = Unsafe_foreign
+
 module type M = sig
   type ptr
   type el

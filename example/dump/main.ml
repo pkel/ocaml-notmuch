@@ -1,5 +1,6 @@
 open Core
 open Notmuch
+open Unsafe
 
 let dump ~srch_str db =
   let f msg =

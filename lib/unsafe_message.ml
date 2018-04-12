@@ -1,3 +1,7 @@
+module C = Unsafe_foreign
+module Iterate = Unsafe_iterate
+module Status = Unsafe_status
+
 type t = C.message
 
 let throw = Status.throw

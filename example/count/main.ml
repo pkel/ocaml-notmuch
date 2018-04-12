@@ -1,5 +1,6 @@
 open Core
 open Notmuch
+open Unsafe
 
 let count ~srch_str ~lastmod db =
   let count =

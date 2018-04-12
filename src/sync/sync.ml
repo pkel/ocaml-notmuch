@@ -1,4 +1,5 @@
 open Notmuch
+open Unsafe
 open Lwt.Infix
 
 module StoreConfig( C : sig val location : string end ) = struct

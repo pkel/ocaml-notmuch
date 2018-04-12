@@ -1,5 +1,6 @@
 open Core
 open Notmuch
+open Unsafe
 
 module Set = Set.Make(String)
 

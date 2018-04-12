@@ -1,5 +1,7 @@
 open Ctypes
 
+module C = Unsafe_foreign
+
 type t = C.database
 let typ : t typ = C.database_t
 

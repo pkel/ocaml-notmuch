@@ -1,6 +1,10 @@
 open Ctypes
 
-type db = Database.t
+module C = Unsafe_foreign
+module Iterate = Unsafe_iterate
+module Status = Unsafe_status
+
+type db = Unsafe_database.t
 
 type exclude =
   | Flag

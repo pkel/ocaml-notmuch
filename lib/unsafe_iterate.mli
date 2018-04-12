@@ -10,6 +10,8 @@ end
 
 type key_value = string * string
 
+module C = Unsafe_foreign
+
 module Messages : M with type ptr := C.messages and type el := C.message
 module Threads : M with type ptr := C.threads and type el := C.thread
 module Properties : M

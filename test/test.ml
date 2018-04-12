@@ -1,4 +1,5 @@
 open Notmuch
+open Unsafe
 
 exception Failed_test of string
 
@@ -77,7 +78,7 @@ let act_on db =
 
 let () =
   let open Printf in
-  let open Ext.Result in
+  let open Notmuch.Ext.Result in
   Config.load ()
   |> and_then ~f:(Config.get ~section:"database" ~key:"path")
   |> and_then_opt ~err:"Failed to open database" ~f:Database.open_

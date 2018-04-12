@@ -1,5 +1,5 @@
 type t
-type db = Database.t
+type db = Unsafe_database.t
 
 val from_string : string -> t
 
@@ -32,6 +32,6 @@ module type Exec = sig
   val stream : db -> t -> tmp Lwt_stream.t
 end
 
-module Messages : Exec with type tmp := C.message
-module Threads  : Exec with type tmp := C.thread
+module Messages : Exec with type tmp := Unsafe_foreign.message
+module Threads  : Exec with type tmp := Unsafe_foreign.thread
 

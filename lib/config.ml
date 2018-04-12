@@ -39,7 +39,8 @@ let from_file filename =
 let locate () =
   let candidates = [
     Sys.getenv_opt "NOTMUCH_CONFIG" ;
-    Sys.getenv_opt "HOME" |> Option.map ~f:(fun x -> x ^ "/.notmuch-config") ;
+    Sys.getenv_opt "HOME" |>
+      Ext_option.map ~f:(fun x -> x ^ "/.notmuch-config") ;
     Some ".notmuch-config" ]
   in
   let filter = function
@@ -60,7 +61,7 @@ let load ?custom () =
 
 let get ~section ~key cfg =
   let open Printf in
-  let open Result in
+  let open Ext_result in
   List.assoc_opt section cfg
       |> of_option ~err:(sprintf
       "Could not find section %s in config" section)

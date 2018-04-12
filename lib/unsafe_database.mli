@@ -1,5 +1,5 @@
 (** opaque database type *)
-type t = C.database
+type t = Unsafe_foreign.database
 
 (** open database at path. write enables write access. default: r/o *)
 val open_ : ?write:bool -> string -> t option

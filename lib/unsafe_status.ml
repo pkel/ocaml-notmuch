@@ -1,5 +1,7 @@
 exception Notmuch_error of string
 
+module C = Unsafe_foreign
+
 let describe = C.status_to_string
 
 (* Check error code and raise Notmuch_error if neccessary *)

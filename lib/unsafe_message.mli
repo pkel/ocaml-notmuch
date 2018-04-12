@@ -1,4 +1,4 @@
-type t = C.message
+type t = Unsafe_foreign.message
 
 val get_id : t -> string
 
