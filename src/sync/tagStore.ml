@@ -42,6 +42,9 @@ module Make(Cfg:Cfg) : M = struct
     let of_string s = Ok (String.split_on_char '\n' s)
 
     let threeway ~old a b =
+      (* TODO: This interprets differences as additions. It's okay for most
+       * tags but does not make sense for tags like +unread.
+       *)
       let open StringSet in
       let old = of_list old in
       let a   = of_list a in
