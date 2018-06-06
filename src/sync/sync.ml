@@ -76,7 +76,8 @@ let read srch_lst =
     |> Messages.stream db
     |> Lwt_stream.iter f
   in
-  Lwt_main.run lwt
+  Lwt_main.run lwt ;
+  Database.close db
 
 let pull () : unit =
   let module C = ConfigFail in
