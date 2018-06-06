@@ -115,11 +115,11 @@ open Cmdliner
 open Term
 
 let push_cmd =
-  let doc = "Push local changes to remote" in
+  let doc = "Push local commits to remote git" in
   const push $ const (), info ~doc "push"
 
 let pull_cmd =
-  let doc = "Pull remote changes to local" in
+  let doc = "Pull remote commits to local git" in
   const pull $ const (), info ~doc "pull"
 
 let srch_lst =
@@ -131,10 +131,10 @@ let srch_lst =
     & info [] ~env ~docv:"SEARCH_TERM" ~doc )
 
 let write_cmd =
-  let doc = "Write changes to local store" in
+  let doc = "Write notmuch database to local git" in
   const write $ srch_lst, info ~doc "write"
 
 let read_cmd =
-  let doc = "Read changes from local store" in
+  let doc = "Update notmuch database from local git" in
   const read $ srch_lst, info ~doc "read"
 
