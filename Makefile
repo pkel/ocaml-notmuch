@@ -8,7 +8,7 @@ all:
 
 .PHONY: clean all test install
 
-install:
+install: all
 	jbuilder install
 
 # Build and run tests
