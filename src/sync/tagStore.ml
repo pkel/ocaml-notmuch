@@ -18,7 +18,6 @@ module type Cfg = sig
 end
 
 module Make(Cfg:Cfg) : M = struct
-  open Sexplib.Std
   open Lwt.Infix
   open Irmin
   open Irmin_unix
@@ -102,7 +101,7 @@ module Make(Cfg:Cfg) : M = struct
     Store.Tree.diff old fresh
       >>= Lwt_list.filter_map_p fmap
 
-  let set_msg_kv tree id key value =
+  let set_msg_kv tree id _key value =
     Store.Tree.add tree (key_of_id id "tags") value
 
   let set_tags t (id, tags) =

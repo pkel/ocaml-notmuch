@@ -1,5 +1,3 @@
-open Core
-
 type tag = string
 type selector = tag list
 

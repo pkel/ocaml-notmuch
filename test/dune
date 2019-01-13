@@ -1,0 +1,8 @@
+(executable
+  (name test)
+  (libraries notmuch))
+
+(alias
+  (name runtest)
+  (package notmuch)
+  (action (run ./test.exe)))

@@ -1,6 +1,0 @@
-(jbuild_version 1)
-
-(library
- ((name move)
-  (libraries (notmuch core fileutils cmdliner))
-  (preprocess (pps (ppx_jane ppx_driver.runner)))))

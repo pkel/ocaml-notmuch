@@ -1,0 +1,4 @@
+(library
+  (name move)
+  (libraries notmuch core fileutils cmdliner)
+  (preprocess (pps ppx_jane)))

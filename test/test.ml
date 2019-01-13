@@ -50,7 +50,7 @@ let test_count db =
   in
   let manual=
     let init = 0 in
-    let f acc el = acc + 1 in
+    let f acc _el = acc + 1 in
     let open Query in
     from_string "*" |> Messages.fold db ~init ~f
   in

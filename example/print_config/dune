@@ -1,9 +1,7 @@
-(jbuild_version 1)
-
 (executable
- ((name main)
-  (libraries (notmuch core))
-  (preprocess (pps (ppx_jane ppx_driver.runner)))))
+  (name main)
+  (libraries notmuch core)
+  (preprocess (pps ppx_jane)))
 
 (rule
   (with-stdout-to data.should (run ./test.sh)))
@@ -12,6 +10,6 @@
   (with-stdout-to data.is (run ./main.exe /home/patrik/.notmuch-config)))
 
 (alias
- ((name runtest)
+  (name runtest)
   (package notmuch)
-  (action (diff data.should data.is))))
+  (action (diff data.should data.is)))

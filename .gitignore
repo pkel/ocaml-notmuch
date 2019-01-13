@@ -1,4 +1,4 @@
 .merlin
 _build
-jbuild-workspace
+dune-workspace
 *.install

@@ -15,7 +15,7 @@ let folders rule msg =
     let open Rules in
     match rule with
     | Folder f -> Some (add folders f)
-    | FolderPerTag prefix -> Some(folders)
+    | FolderPerTag _prefix -> Some(folders) (* TODO: what is going on here? *)
     | Filter (sel, rule) ->
         if of_list sel |> is_subset ~of_:msg_tags
         then h folders rule

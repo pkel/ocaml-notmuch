@@ -1,0 +1,6 @@
+(executable
+  (name main)
+  (public_name onm)
+  (package onm)
+  (preprocess (pps lwt_ppx))
+  (libraries cmdliner sync move))

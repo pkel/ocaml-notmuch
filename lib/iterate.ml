@@ -30,8 +30,8 @@ module F (I : In) : (M with type ptr := I.ptr and type el := I.el) = struct
         acc
     in
     let res = h init in
-    (* destroy c iterator object and thereby all elements
-     * everyting in the c world will be lost from here on
+    (* destroy C iterator object and thereby all elements
+     * everything in the C world will be lost from here on
      *)
     I.destroy ptr ;
     res
@@ -43,7 +43,7 @@ module F (I : In) : (M with type ptr := I.ptr and type el := I.el) = struct
 
   let iter ptr ~f =
     let init = () in
-    let f acc e = f e in
+    let f _acc e = f e in
     fold ptr ~init ~f
 
   let stream ?finalize ptr =
